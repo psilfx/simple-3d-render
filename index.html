@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ru" >
+	<head>
+		<title>Простой 3д рендер</title>
+		<meta charset="UTF-8" />
+		<script src="js/vector.js"></script>
+		<script src="js/render.js"></script>
+		<script src="js/wall.js"></script>
+		<script src="js/lines-extract.js"></script>
+	</head>
+	<body>
+		<canvas id="texture-canvas" width="1280" height="720" style="display: none" ></canvas>
+		<canvas id="render-canvas" width="640" height="360" ></canvas>
+		<style>
+			#render-canvas {
+				margin: 0 auto;
+				width: 100%;
+				user-select: none;
+			}
+			#texture-render {
+				display: none;
+			}
+		</style>
+		<script>
+			const canvas   = document.querySelector( "#render-canvas" );
+			const tcanvas   = document.querySelector( "#texture-canvas" );
+			const context  = canvas.getContext( "2d" , { willReadFrequently: true , alpha: false } );
+			const width    = canvas.width;
+			const height   = canvas.height;
+			const widthH   = parseInt( canvas.width >> 1 );
+			const heightH  = parseInt( canvas.height >> 1 );
+			//const fov      = 1.05; //Угол обзора
+			const fov      = Math.PI / 4; // 45 градусов
+			const fovHalf  = fov * 0.5;
+			const camScale = ( 2 * Math.tan( fovHalf ) );
+			const scale    = width / camScale;
+			const near     = 0.1;
+			const far      = 100;
+			const textSize = 64;
+			const wallHMax = height * 2;
+			const render   = new Render();
+			
+			let position = CreateVector3F( 0 , 0 , -5 );
+			
+			let cubeVertex = [ 	CreateVector3F( -1 , 0 , 1 ) , CreateVector3F( 1 , 0 , 1 ) ,  CreateVector3F( 1 , 2 , 1 ) , CreateVector3F( -1 , 2 , 1 ) , 
+								CreateVector3F( -1 , 2 , 3 ) , CreateVector3F( 1 , 2 , 3 ) ,  CreateVector3F( 1 , 0 , 3 ) , CreateVector3F( -1 , 0 , 3 ) ];
+			
+			let angleMod   = 1.57;
+			let camAngle   = 0;
+			let speed      = 0.2;
+			let minDist    = 1;
+			
+			context.strokeStyle = 'green';
+			context.lineWidth = 1;
+			
+			// Создаем текстуру
+			const texture = {
+				width: 64,
+				height: 64,
+				data: new Uint8Array(64 * 64 * 4)
+			};
+
+			
+			let img = new Image();
+				img.src = 'img/cube.jpg';
+				img.onload = function() {
+					let tcontext = tcanvas.getContext( '2d' , { willReadFrequently: true }  );
+					tcontext.clearRect( 0 , 0 , tcanvas.width, tcanvas.height );
+					tcanvas.width  = this.width;
+					tcanvas.height = this.height;
+					tcontext.drawImage( this , 0 , 0 );
+					//Сохраняет пиксели изображения
+					let imageData = tcontext.getImageData( 0 , 0 , this.width , this.height );
+					let pixelData = imageData.data;
+					for( let p = 0; p < pixelData.length; p++ ) {
+						texture.data[ p ] = pixelData[ p ];
+					}
+				}
+			let lines = [];
+			const lineExtract = new LineExtractor();
+			let levelImg = new Image();
+				levelImg.src = 'img/test-level.png';
+				levelImg.onload = function() {
+					let tcontext = tcanvas.getContext( '2d' , { willReadFrequently: true }  );
+					tcontext.clearRect( 0 , 0 , tcanvas.width, tcanvas.height );
+					tcanvas.width  = this.width;
+					tcanvas.height = this.height;
+					tcontext.drawImage( this , 0 , 0 );
+					//Сохраняет пиксели изображения
+					let imageData = tcontext.getImageData( 0 , 0 , this.width , this.height );
+					lineExtract.Init( imageData );
+					lines = lineExtract.FindLines();
+				}
+			
+			let sidesS = [ CreateVector3F( 2 , -1.2 , 0 ) , CreateVector3F( 3 , -1.2 , 0 ) , CreateVector3F( 2 , -1.2 , 1 ) , CreateVector3F( 3 , -1.2 , 1 ) ];
+			let sides = [ CreateVector3F( 0 , -1.2 , 0 ) , CreateVector3F( 5 , -1.2 , 0 ) , CreateVector3F( 0 , -1.2 , 5 ) , CreateVector3F( 5 , -1.2 , 5 ) ];
+			
+			let cubeMod = new Float16Array( 2 );
+			let cubeAng = 0;
+			let sidesCenter = CreateVector3F( 2.5 , -0.6 , 0.5 );
+			
+			let wall = new Wall( CreateVector3F( 0 , 1.2 , 0 ) , CreateVector3F( 1 , 1.2 , 0 ) , 1 , 1 , img );
+			let wall2 = new Wall( CreateVector3F( 0 , -1.2 , 5 ) , CreateVector3F( 1 , -1.2 , 5 ) , 1 , 1 , img );
+			let wall3 = new Wall( CreateVector3F( 2 , 0 , 3 ) , CreateVector3F( 3 , 0 , 3 ) , 1 , 1 , img );
+			let wall4 = new Wall( CreateVector3F( 2.25 , 0 , 1 ) , CreateVector3F( 2.75 , 0 , 1 ) , 0.5 , 0.5 , img );
+			
+			function RenderCube() {
+				
+
+				render.ReadBuffer();
+
+				wall.Update();
+				wall2.Update();
+				wall3.Update();
+				wall4.Update();
+				wall.Draw();
+				wall2.Draw();
+				wall3.Draw();
+				wall4.Draw();
+				
+				//render.DrawBG();
+			
+				cubeAng += 0.03;
+			}
+			
+			//Основной цикл
+			function Frame() {
+				context.clearRect( 0 , 0 , canvas.width , canvas.height );
+				render.SetProject();
+				
+
+				RenderCube();
+				render.DrawBuffer()
+
+				window.requestAnimationFrame( Frame );
+				
+			}
+			Frame();
+			window.addEventListener( "keydown" , function( e ) {
+				if( e.keyCode == 87 ) {
+					position[ 0 ] += speed * render.project[ 1 ];
+					position[ 2 ] += speed * render.project[ 0 ];
+				} 
+				if( e.keyCode == 83 ) {
+					position[ 0 ] -= speed * render.project[ 1 ];
+					position[ 2 ] -= speed * render.project[ 0 ];
+				}
+				if( e.keyCode == 65 ) {
+					position[ 0 ] -= speed * render.project[ 0 ];
+					position[ 2 ] += speed * render.project[ 1 ];
+				} 
+				if( e.keyCode == 68 ){
+					position[ 0 ] += speed * render.project[ 0 ];
+					position[ 2 ] -= speed * render.project[ 1 ];
+				}
+			});
+			window.addEventListener( "mousemove" , function( e ) {
+				if( e.movementX > 0 ) camAngle += 0.01; 
+				if( e.movementX < 0 ) camAngle -= 0.01; 
+				//console.log( e.movementX );
+			});
+			canvas.addEventListener( "click" , async () => {
+					await canvas.requestFullscreen();
+					await canvas.requestPointerLock( {
+						unadjustedMovement: true,
+					});
+			});
+		</script>
+	</body>
+</html>
