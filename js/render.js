@@ -2,10 +2,7 @@ let bufferYcache; //Для того чтобы избавиться от опе�
 let bufferXcache; //Для того чтобы избавиться от операции умножения
 let textureYCache; //Для текстуры можно по одной стороне, они квадратные
 let distInvCache; //Кэш расстояния, чтобы отказаться от деления в циклах
-// Вспомогательная функция для проверки точки в треугольнике
-function EdgeFunction( p1, p2, pixel ) {
-    return ( p2[ 0 ] - p1[ 0 ] ) * ( pixel[ 1 ] - p1[ 1 ] ) - ( p2[ 1 ] - p1[ 1 ] ) * ( pixel[ 0 ] - p1[ 0 ] );
-}
+
 class Render {
 	
 	imageData;
@@ -35,7 +32,7 @@ class Render {
 		for( let y = 0; y < canvas.height; y++ ) {
 			for( let x = 0; x < canvas.width; x++ ) {
 				let buffI = bufferYcache[ y ] + bufferXcache[ x ];
-				if( this.frameBuffer[ buffI ] > 0 ) continue;
+				if( this.frameBuffer[ buffI + 1 ] > 0 ) continue;
 				this.frameBuffer[ buffI ]     = 255;
 				this.frameBuffer[ buffI + 1 ] = 255;
 				this.frameBuffer[ buffI + 2 ] = 255;
@@ -45,7 +42,7 @@ class Render {
 	}
 	ProjectPoint( point , position , wallHeight = 1 ) {
 		let rotated   = new Float16Array( 3 );
-		let projected = new Float16Array( 3 );
+		let projected = new Float16Array( 4 );
 		let camCoords = SubtractVectorsF( point , position );
 		// Поворачиваем точку
 		rotated[ 0 ] = camCoords[ 0 ] * this.project[ 0 ] - camCoords[ 2 ] * this.project[ 1 ]; //x
@@ -53,28 +50,20 @@ class Render {
 		rotated[ 2 ] = camCoords[ 0 ] * this.project[ 1 ] + camCoords[ 2 ] * this.project[ 0 ]; //z
 		// Проецируем точку
 		projected[ 0 ] = ( ( rotated[ 0 ] / rotated[ 2 ] ) * scale + widthH ) | 0;
-		//projected[ 1 ] = ( point[ 1 ]   / rotated[ 1 ] ) * scale + heightH;
 		projected[ 1 ] = point[ 1 ];
-		projected[ 2 ] = Math.min( wallHMax , ( wallHMax * ( wallHeight / Math.hypot( camCoords[ 0 ] , camCoords[ 1 ] , camCoords[ 2 ] ) ) ) | 0 );
+		projected[ 2 ] = Math.min( wallHMax , ( wallHMax * ( 1 / Math.hypot( camCoords[ 0 ] , camCoords[ 1 ] , camCoords[ 2 ] ) ) | 0 ) ); //Полный размер проекции
+		projected[ 3 ] = ( projected[ 2 ] * wallHeight ) | 0; //Отмасштабированная стена
 		return projected;
 	}
 	SetProject() {
 		this.project[ 0 ] = Math.cos( camAngle );
 		this.project[ 1 ] = Math.sin( camAngle );
 	}
-	
-	RenderTexturedWallDoom( v1 , v2 , wallHeight , texture ) {
-		
-		let p1 = this.ProjectPoint( v1 , position , wallHeight );
-		let p2 = this.ProjectPoint( v2 , position , wallHeight );
-		
-		return this.RenderWallPolygon( p1 , p2 , wallHeight , texture );
-	}
 	GetWallDrawPoints( p1 , p2 ) {
-		let topLeft     = CreateVector2F( p1[ 0 ] , heightH - ( p1[ 2 ] >> 1 ) - p1[ 1 ] * p1[ 2 ] );
-		let topRight    = CreateVector2F( p2[ 0 ] , heightH - ( p2[ 2 ] >> 1 ) - p2[ 1 ] * p2[ 2 ] );
-		let bottomLeft  = CreateVector2F( topLeft[ 0 ]  , topLeft[ 1 ]  + p1[ 2 ] );
-		let bottomRight = CreateVector2F( topRight[ 0 ] , topRight[ 1 ] + p2[ 2 ] );
+		let topLeft     = CreateVector2F( p1[ 0 ] , heightH - ( p1[ 3 ] ) - ( p1[ 1 ] - position[ 1 ] ) * p1[ 2 ] );
+		let topRight    = CreateVector2F( p2[ 0 ] , heightH - ( p2[ 3 ] ) - ( p2[ 1 ] - position[ 1 ] ) * p2[ 2 ] );
+		let bottomLeft  = CreateVector2F( topLeft[ 0 ]  , topLeft[ 1 ]  + p1[ 3 ] );
+		let bottomRight = CreateVector2F( topRight[ 0 ] , topRight[ 1 ] + p2[ 3 ] );
 		return [ topLeft , topRight , bottomLeft , bottomRight ];
 	}
 	RenderWallPolygon( p1 , p2 , wallHeight , texture ) {
@@ -178,7 +167,7 @@ class Render {
 		const shadDist2 = shadows[ 2 ] * 0.1;
 		const baseDist1 = Math.max( Math.abs( baseDirection1_x ) , Math.abs( baseDirection1_y ) );
 		const baseDist2 = Math.max( Math.abs( baseDirection2_x ) , Math.abs( baseDirection2_y ) );
-		const baseDist  = Math.max( baseDist1 , baseDist2 );
+		const baseDist  = Math.min( Math.max( baseDist1 , baseDist2 ) , width );
 		//Оптимизация t, чтобы избежать деления в цикле
 		const baseDistInv = distInvCache[ baseDist | 0 ];
 		//Считаем шаг цикла
@@ -207,7 +196,7 @@ class Render {
 			const dir_x = end_x - start_x;
 			const dir_y = end_y - start_y;
 			//Считаем длинну линии
-			const dist  = Math.max( Math.abs( dir_x ) , Math.abs( dir_y ) );
+			const dist  = Math.min( Math.max( Math.abs( dir_x ) , Math.abs( dir_y ) ) , width );
 			let distInv = 1 / dist;
 			//Считаем шаг
 			const shadStep2 = shadDist2 * distInv;

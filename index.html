@@ -32,7 +32,8 @@
 			//const fov      = 1.05; //Угол обзора
 			const fov      = Math.PI / 4; // 45 градусов
 			const fovHalf  = fov * 0.5;
-			const camScale = ( 2 * Math.tan( fovHalf ) );
+			const tanHalfFov = Math.tan( fovHalf );
+			const camScale = ( 2 * tanHalfFov );
 			const scale    = width / camScale;
 			const near     = 0.1;
 			const far      = 100;
@@ -40,7 +41,9 @@
 			const wallHMax = height * 2;
 			const render   = new Render();
 			
-			let position = CreateVector3F( 0 , 0 , -5 );
+			
+			let position  = CreateVector3F( 0 , 0.5 , 0 );
+			let camNormal = CreateVector3F( 0 , 0 , 0 );
 			
 			let cubeVertex = [ 	CreateVector3F( -1 , 0 , 1 ) , CreateVector3F( 1 , 0 , 1 ) ,  CreateVector3F( 1 , 2 , 1 ) , CreateVector3F( -1 , 2 , 1 ) , 
 								CreateVector3F( -1 , 2 , 3 ) , CreateVector3F( 1 , 2 , 3 ) ,  CreateVector3F( 1 , 0 , 3 ) , CreateVector3F( -1 , 0 , 3 ) ];
@@ -99,16 +102,17 @@
 			let cubeAng = 0;
 			let sidesCenter = CreateVector3F( 2.5 , -0.6 , 0.5 );
 			
-			let wall = new Wall( CreateVector3F( 0 , 1.2 , 0 ) , CreateVector3F( 1 , 1.2 , 0 ) , 1 , 1 , img );
-			let wall2 = new Wall( CreateVector3F( 0 , -1.2 , 5 ) , CreateVector3F( 1 , -1.2 , 5 ) , 1 , 1 , img );
-			let wall3 = new Wall( CreateVector3F( 2 , 0 , 3 ) , CreateVector3F( 3 , 0 , 3 ) , 1 , 1 , img );
-			let wall4 = new Wall( CreateVector3F( 2.25 , 0 , 1 ) , CreateVector3F( 2.75 , 0 , 1 ) , 0.5 , 0.5 , img );
+			let wall = new Wall( CreateVector3F( 5 , 0 , 5 ) , CreateVector3F( 5.1 , 0 , 5 ) , 0.1 , 1 , img );
+			let wall2 = new Wall( CreateVector3F( 5.9 , 0 , 5 ) , CreateVector3F( 6 , 0 , 5 ) , 0.1 , 1 , img );
+			let wall3 = new Wall( CreateVector3F( 5 , 1 , 5 ) , CreateVector3F( 6 , 1 , 5 ) , 0.1 , 0.1 , img );
+			let wall4 = new Wall( CreateVector3F( 7.25 , -0.5 , 6 ) , CreateVector3F( 7.75 , -0.5 , 6 ) , 0.5 , 0.5 , img );
 			
 			function RenderCube() {
 				
 
 				render.ReadBuffer();
-
+				
+				wall4.Rotate( cubeAng );
 				wall.Update();
 				wall2.Update();
 				wall3.Update();
@@ -127,6 +131,14 @@
 			function Frame() {
 				context.clearRect( 0 , 0 , canvas.width , canvas.height );
 				render.SetProject();
+				
+				<!-- // Приводим угол к диапазону [-PI, PI] -->
+				<!-- while ( camAngle > Math.PI )  camAngle -= 2 * Math.PI; -->
+				<!-- while ( camAngle < -Math.PI ) camAngle += 2 * Math.PI; -->
+				
+				camNormal[ 0 ] = Math.cos( camAngle );
+				camNormal[ 2 ] = Math.sin( camAngle );
+				
 				
 
 				RenderCube();
@@ -157,6 +169,7 @@
 			window.addEventListener( "mousemove" , function( e ) {
 				if( e.movementX > 0 ) camAngle += 0.01; 
 				if( e.movementX < 0 ) camAngle -= 0.01; 
+				
 				//console.log( e.movementX );
 			});
 			canvas.addEventListener( "click" , async () => {

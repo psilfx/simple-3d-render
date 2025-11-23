@@ -10,6 +10,8 @@ class Wall {
 	transformedPoints;
 	transformedNormals;
 	visibleSides;
+	visiblePoints;
+	visible = false;
 	
 	projPoints;
 	
@@ -33,6 +35,7 @@ class Wall {
 		this.projPoints         = [ CreateVector3F() , CreateVector3F() , CreateVector3F() , CreateVector3F() ];
 		this.drawedPoints       = [ CreateVector2F() , CreateVector2F() , CreateVector2F() , CreateVector2F() ];
 		this.visibleSides       = [ false , false , false , false ];
+		this.visiblePoints      = [ false , false , false , false ];
 		this.CreateWallPoints( pointStart , pointEnd );
 		this.CalcCenter();
 		this.CreateWallNormals();
@@ -103,10 +106,18 @@ class Wall {
 	}
 	UpdateVision() {
 		let front = VectorNormalize3F( SubtractVectorsF( this.center , position ) );
+		//let normal = CreateVector3F( -camNormal[ 0 ] , -camNormal[ 1 ] , -camNormal[ 2 ] );
+		
 		this.visibleSides[ 0 ] = DotVectors( front , this.transformedNormals[ 0 ] );
 		this.visibleSides[ 1 ] = DotVectors( front , this.transformedNormals[ 1 ] );
 		this.visibleSides[ 2 ] = DotVectors( front , this.transformedNormals[ 2 ] );
 		this.visibleSides[ 3 ] = DotVectors( front , this.transformedNormals[ 3 ] );
+		this.visible = DotVectors( front , camNormal );
+	}
+	IsVisible( point ) {
+		const vx = ( point[ 0 ] >= 0 && point[ 0 ] <= width );
+		const vy = ( point[ 1 ] >= 0 && point[ 1 ] <= height );
+		return ( vx && vy );
 	}
 	Update() {
 		this.projPoints[ 0 ] = render.ProjectPoint( this.transformedPoints[ 0 ] , position , this.height );
@@ -115,13 +126,15 @@ class Wall {
 		this.projPoints[ 3 ] = render.ProjectPoint( this.transformedPoints[ 3 ] , position , this.height );
 		this.UpdateVision();
 	}
+
 	Draw() {
-		let light1 = Math.max( 255 - 255 * Math.min( this.visibleSides[ 0 ] , 1.5 ) , 0 );
-		let light2 = Math.max( 255 - 255 * Math.min( this.visibleSides[ 1 ] , 1.5 ) , 0 );
-		let light3 = 255 - 255 * Math.min( this.visibleSides[ 2 ] , 1.5 );
-		let light4 = 255 - 255 * Math.min( this.visibleSides[ 3 ] , 1.5 );
+		//if( this.visible <= 0 ) return;
+		let light1 = Math.max( 255 - 255 * Math.min( this.visibleSides[ 0 ] , 1 ) , 0 );
+		let light2 = Math.max( 255 - 255 * Math.min( this.visibleSides[ 1 ] , 1 ) , 0 );
+		let light3 = 255 - 255 * Math.min( this.visibleSides[ 2 ] , 1 );
+		let light4 = 255 - 255 * Math.min( this.visibleSides[ 3 ] , 1 );
 		let lights = [ light1 , light1 , light2 , light2 ];
-		let drawPoints1 = render.GetWallDrawPoints( this.projPoints[ 0 ] , this.projPoints[ 1 ] );
+		let	drawPoints1 = render.GetWallDrawPoints( this.projPoints[ 0 ] , this.projPoints[ 1 ] );
 		if( this.visibleSides[ 0 ] > 0 ) render.RenderWallPolygonOpt( drawPoints1[ 0 ] , drawPoints1[ 1 ] , drawPoints1[ 2 ] , drawPoints1[ 3 ] , texture.data , light1 );
 		let	drawPoints2 = render.GetWallDrawPoints( this.projPoints[ 0 ] , this.projPoints[ 2 ] );
 		if( this.visibleSides[ 2 ] > 0 ) render.RenderWallPolygonOpt( drawPoints2[ 0 ] , drawPoints2[ 1 ] , drawPoints2[ 2 ] , drawPoints2[ 3 ] , texture.data , light3 );
@@ -140,5 +153,29 @@ class Wall {
 			drawPoints3[ 2 ][ 1 ] <= heightH && 
 			drawPoints3[ 3 ][ 1 ] <= heightH ) render.RenderTexturedFloorDoomOpt( drawPoints1[ 2 ] , drawPoints1[ 3 ] , drawPoints3[ 2 ] , drawPoints3[ 3 ] , texture.data , lights );
 		
+	}
+	Clip ( p1 , p2 ) {
+		const intersection = CreateVector3F();
+		// Вектор от камеры к точкам
+		const p1_x = p1[ 0 ] - position[ 0 ];
+		const p1_z = p1[ 2 ] - position[ 2 ];
+		const p2_x = p2[ 0 ] - position[ 0 ]; 
+		const p2_z = p2[ 2 ] - position[ 2 ];
+		
+		// Dot products с направлением камеры
+		const dot1 = p1_x * camNormal[ 0 ] + p1_z * camNormal[ 2 ];
+		const dot2 = p2_x * camNormal[ 0 ] + p2_z * camNormal[ 2 ];
+		
+		// P1 находится на расстоянии dot1 от плоскости
+		// P2 находится на расстоянии dot2 от плоскости
+		// Плоскость находится на расстоянии 0 (прямо перед камерой)
+		
+		// t = расстояние от P1 до плоскости / общее расстояние между точками
+		const t = dot1 / ( dot1 - dot2 );
+		
+		intersection[ 0 ] = p1[ 0 ] + t * ( p2[ 0 ] - p1[ 0 ] );
+		intersection[ 2 ] = p1[ 2 ] + t * ( p2[ 2 ] - p1[ 2 ] );
+		
+		return intersection;
 	}
 }
