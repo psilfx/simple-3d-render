@@ -34,6 +34,7 @@ class Cell {
 		this.porjectPoints[ 3 ] = render.ProjectPoint( this.line_b[ 1 ] , cameraPosition , 1 );
 		
 	}
+	
 	Draw() {
 		if( this.drawed ) return;
 		this.drawed = true;
@@ -48,7 +49,7 @@ class Cell {
 		//if( drawPoints1[ 3 ][ 0 ] < 0 || drawPoints1[ 3 ][ 0 ] > width ) return;
 		//if( drawPoints2[ 2 ][ 0 ] < 0 || drawPoints2[ 2 ][ 0 ] > width ) return;
 		//if( drawPoints2[ 3 ][ 0 ] < 0 || drawPoints2[ 3 ][ 0 ] > width ) return;
-		render.RenderTexturedFloorDoomOpt( point1 , point2 , point3 , point4 , texture.data , this.shadow );
+		render.RenderTexturedFloorDoomOpt( point1 , point2 , point3 , point4 , this.texture.data , this.shadow );
 		
 		for( let w = 0; w < this.wallsCount; w++ ) {
 			level.walls[ this.walls[ w ] ].Update();
@@ -75,10 +76,11 @@ class Level {
 			for( let x = 0; x < this.x; x++ ) {
 				let key           = this.GetCellKey( x , y );
 				this.cells[ key ] = new Cell( x , y , key );
+				this.cells[ key ].texture = texture;
 			}
 		}
 	}
-	AddWall( start , end , width , height ) {
+	AddWall( start , end , width , height , texture ) {
 		this.wallsCount++;
 		let key  = this.wallsCount;
 		this.walls[ key ] = new Wall( start , end , width , height , texture );
@@ -88,6 +90,10 @@ class Level {
 	}
 	Update() {
 		this.cells.forEach( ( element ) => { element.Update() } );
+	}
+	SetCellTexture( x , y , texture ) {
+		const cell = this.GetCell( x , y );
+		if( cell ) cell.texture = texture;
 	}
 	GetCellKey( x , y ) {
 		return ( y * this.x + x ) | 0;

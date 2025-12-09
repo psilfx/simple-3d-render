@@ -8,11 +8,12 @@
 		<script src="js/wall.js"></script>
 		<script src="js/level.js"></script>
 		<script src="js/camera.js"></script>
+		<script src="js/texture.js"></script>
 		<script src="js/lines-extract.js"></script>
 	</head>
 	<body>
 		<canvas id="texture-canvas" width="1280" height="720" style="display: none" ></canvas>
-		<canvas id="render-canvas" width="640" height="420" ></canvas>
+		<canvas id="render-canvas" width="320" height="200" ></canvas>
 		<style>
 			#render-canvas {
 				margin: 0 auto;
@@ -63,29 +64,15 @@
 			context.strokeStyle = 'green';
 			context.lineWidth = 1;
 			
-			// Создаем текстуру
-			const texture = {
-				width: 64,
-				height: 64,
-				data: new Uint8Array( 64 * 64 * 4 )
-			};
-
+			const texture = new Texture( 'img/cube.jpg' );
+				  texture.Load();
 			
-			let img = new Image();
-				img.src = 'img/cube.jpg';
-				img.onload = function() {
-					let tcontext = tcanvas.getContext( '2d' , { willReadFrequently: true }  );
-					tcontext.clearRect( 0 , 0 , tcanvas.width, tcanvas.height );
-					tcanvas.width  = this.width;
-					tcanvas.height = this.height;
-					tcontext.drawImage( this , 0 , 0 );
-					//Сохраняет пиксели изображения
-					let imageData = tcontext.getImageData( 0 , 0 , this.width , this.height );
-					let pixelData = imageData.data;
-					for( let p = 0; p < pixelData.length; p++ ) {
-						texture.data[ p ] = pixelData[ p ];
-					}
-				}
+			const texture1 = new Texture( 'img/cube_1.jpg' );
+				  texture1.Load();
+				  
+			const texture2 = new Texture( 'img/wall.jpg' );
+				  texture2.Load();
+			
 			let lines = [];
 			const lineExtract = new LineExtractor();
 			let levelImg = new Image();
@@ -109,17 +96,12 @@
 			let cubeAng = 0;
 			let sidesCenter = CreateVector3F( 2.5 , -0.6 , 0.5 );
 			
-			let wall = new Wall( CreateVector3F( 5 , 0 , 5 ) , CreateVector3F( 5.1 , 0 , 5 ) , 0.1 , 1 , img );
-			let wall2 = new Wall( CreateVector3F( 5.9 , 0 , 5 ) , CreateVector3F( 6 , 0 , 5 ) , 0.1 , 1 , img );
-			let wall3 = new Wall( CreateVector3F( 5 , 1 , 5 ) , CreateVector3F( 6 , 1 , 5 ) , 0.1 , 0.1 , img );
-			let wall4 = new Wall( CreateVector3F( 7.25 , 0 , 6 ) , CreateVector3F( 7.75 , 0 , 6 ) , 0.5 , 0.5 , img );
-			
 			const level = new Level( 10 , 10 );
-				  level.AddWall( CreateVector3F( 5 , 0 , 5 ) , CreateVector3F( 5.1 , 0 , 5 ) , 0.1 , 1 );
-				  level.AddWall( CreateVector3F( 5.9 , 0 , 5 ) , CreateVector3F( 6 , 0 , 5 ) , 0.1 , 1 );
-				  level.AddWall( CreateVector3F( 5 , 1 , 5 ) , CreateVector3F( 6 , 1 , 5 ) , 0.1 , 0.1 );
-				  level.AddWall( CreateVector3F( 7.25 , 0 , 6 ) , CreateVector3F( 7.75 , 0 , 6 ) , 0.5 , 0.5 );
-			
+				  level.AddWall( CreateVector3F( 5 , 0 , 5 ) , CreateVector3F( 5.1 , 0 , 5 ) , 0.1 , 1 , texture2 );
+				  level.AddWall( CreateVector3F( 5.9 , 0 , 5 ) , CreateVector3F( 6 , 0 , 5 ) , 0.1 , 1 , texture2 );
+				  level.AddWall( CreateVector3F( 5 , 1 , 5 ) , CreateVector3F( 6 , 1 , 5 ) , 0.1 , 0.1 , texture2 );
+				  level.AddWall( CreateVector3F( 7.25 , 0 , 6 ) , CreateVector3F( 7.75 , 0 , 6 ) , 0.5 , 0.5 , texture );
+				  level.SetCellTexture( 3 , 3 , texture1 );
 			
 			const circleAngle360 = 2 * Math.PI;
 			const PI             = Math.PI;

@@ -135,13 +135,13 @@ class Wall {
 		let light4 = 255 - 255 * Math.min( this.visibleSides[ 3 ] , 1 );
 		let lights = [ light1 , light1 , light2 , light2 ];
 		let	drawPoints1 = render.GetWallDrawPoints( this.projPoints[ 0 ] , this.projPoints[ 1 ] );
-		if( this.visibleSides[ 0 ] > 0 ) render.RenderWallPolygonOpt( drawPoints1[ 0 ] , drawPoints1[ 1 ] , drawPoints1[ 2 ] , drawPoints1[ 3 ] , texture.data , light1 );
+		if( this.visibleSides[ 0 ] > 0 ) render.RenderWallPolygonOpt( drawPoints1[ 0 ] , drawPoints1[ 1 ] , drawPoints1[ 2 ] , drawPoints1[ 3 ] , this.texture.data , light1 );
 		let	drawPoints2 = render.GetWallDrawPoints( this.projPoints[ 0 ] , this.projPoints[ 2 ] );
-		if( this.visibleSides[ 2 ] > 0 ) render.RenderWallPolygonOpt( drawPoints2[ 0 ] , drawPoints2[ 1 ] , drawPoints2[ 2 ] , drawPoints2[ 3 ] , texture.data , light3 );
+		if( this.visibleSides[ 2 ] > 0 ) render.RenderWallPolygonOpt( drawPoints2[ 0 ] , drawPoints2[ 1 ] , drawPoints2[ 2 ] , drawPoints2[ 3 ] , this.texture.data , light3 );
 		let	drawPoints3 = render.GetWallDrawPoints( this.projPoints[ 2 ] , this.projPoints[ 3 ] );
-		if( this.visibleSides[ 1 ] > 0 ) render.RenderWallPolygonOpt( drawPoints3[ 0 ] , drawPoints3[ 1 ] , drawPoints3[ 2 ] , drawPoints3[ 3 ] , texture.data , light2 );
+		if( this.visibleSides[ 1 ] > 0 ) render.RenderWallPolygonOpt( drawPoints3[ 0 ] , drawPoints3[ 1 ] , drawPoints3[ 2 ] , drawPoints3[ 3 ] , this.texture.data , light2 );
 		let	drawPoints4 = render.GetWallDrawPoints( this.projPoints[ 1 ] , this.projPoints[ 3 ] );
-		if( this.visibleSides[ 3 ] > 0 ) render.RenderWallPolygonOpt( drawPoints4[ 0 ] , drawPoints4[ 1 ] , drawPoints4[ 2 ] , drawPoints4[ 3 ] , texture.data , light4 );
+		if( this.visibleSides[ 3 ] > 0 ) render.RenderWallPolygonOpt( drawPoints4[ 0 ] , drawPoints4[ 1 ] , drawPoints4[ 2 ] , drawPoints4[ 3 ] , this.texture.data , light4 );
 		//Потолок
 		if( drawPoints1[ 0 ][ 1 ] >= heightH && 
 			drawPoints1[ 1 ][ 1 ] >= heightH && 

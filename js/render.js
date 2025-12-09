@@ -278,57 +278,70 @@ class Render {
 					
 					//Красим 2 пикселя
 					let shadow  = ( shadWay1 + shadWay2 );
-					
-					this.frameBuffer[ buffI - 4 ] = textureData[ pixelI ] - shadow;
-					this.frameBuffer[ buffI - 3 ] = textureData[ pixelI + 1 ] - shadow;
-					this.frameBuffer[ buffI - 2 ] = textureData[ pixelI + 2 ] - shadow;
-					this.frameBuffer[ buffI - 1 ] = 255;
+					//Хардкод для оптимизации, вложенные циклы работают медленнее
+					if( this.frameBuffer[ buffI - 4 ] == 0 ) {
+						this.frameBuffer[ buffI - 4 ] = textureData[ pixelI ] - shadow;
+						this.frameBuffer[ buffI - 3 ] = textureData[ pixelI + 1 ] - shadow;
+						this.frameBuffer[ buffI - 2 ] = textureData[ pixelI + 2 ] - shadow;
+						this.frameBuffer[ buffI - 1 ] = 255;
+					}
 					
 					this.frameBuffer[ buffI ]     = textureData[ pixelI ] - shadow;
 					this.frameBuffer[ buffI + 1 ] = textureData[ pixelI + 1 ] - shadow;
 					this.frameBuffer[ buffI + 2 ] = textureData[ pixelI + 2 ] - shadow;
 					this.frameBuffer[ buffI + 3 ] = 255;
 					
-					this.frameBuffer[ buffI + 4 ] = textureData[ pixelI + 4 ] - shadow;
-					this.frameBuffer[ buffI + 5 ] = textureData[ pixelI + 5 ] - shadow;
-					this.frameBuffer[ buffI + 6 ] = textureData[ pixelI + 6 ] - shadow;
-					this.frameBuffer[ buffI + 7 ] = 255;
+					//if( this.frameBuffer[ buffI + 4 ] == 0 ) {
+						this.frameBuffer[ buffI + 4 ] = textureData[ pixelI + 4 ] - shadow;
+						this.frameBuffer[ buffI + 5 ] = textureData[ pixelI + 5 ] - shadow;
+						this.frameBuffer[ buffI + 6 ] = textureData[ pixelI + 6 ] - shadow;
+						this.frameBuffer[ buffI + 7 ] = 255;
+					//}
 					
 					buffI  = bufferYcache[ pixel_y - 1 ] + bufferXcache[ pixel_x ];
 					pixelI = textureYCache[ Math.max( py - 1 , 0 ) ] + bufferXcache[ px ];
 					
-					this.frameBuffer[ buffI - 4 ] = textureData[ pixelI ] - shadow;
-					this.frameBuffer[ buffI - 3 ] = textureData[ pixelI + 1 ] - shadow;
-					this.frameBuffer[ buffI - 2 ] = textureData[ pixelI + 2 ] - shadow;
-					this.frameBuffer[ buffI - 1 ] = 255;
+					if( this.frameBuffer[ buffI - 4 ] == 0 ) {
+						this.frameBuffer[ buffI - 4 ] = textureData[ pixelI ] - shadow;
+						this.frameBuffer[ buffI - 3 ] = textureData[ pixelI + 1 ] - shadow;
+						this.frameBuffer[ buffI - 2 ] = textureData[ pixelI + 2 ] - shadow;
+						this.frameBuffer[ buffI - 1 ] = 255;
+					}
 					
-					this.frameBuffer[ buffI ]     = textureData[ pixelI ] - shadow;
-					this.frameBuffer[ buffI + 1 ] = textureData[ pixelI + 1 ] - shadow;
-					this.frameBuffer[ buffI + 2 ] = textureData[ pixelI + 2 ] - shadow;
-					this.frameBuffer[ buffI + 3 ] = 255;
-					
-					this.frameBuffer[ buffI + 4 ] = textureData[ pixelI + 4 ] - shadow;
-					this.frameBuffer[ buffI + 5 ] = textureData[ pixelI + 5 ] - shadow;
-					this.frameBuffer[ buffI + 6 ] = textureData[ pixelI + 6 ] - shadow;
-					this.frameBuffer[ buffI + 7 ] = 255;
+					if( this.frameBuffer[ buffI ] == 0 ) {
+						this.frameBuffer[ buffI ]     = textureData[ pixelI ] - shadow;
+						this.frameBuffer[ buffI + 1 ] = textureData[ pixelI + 1 ] - shadow;
+						this.frameBuffer[ buffI + 2 ] = textureData[ pixelI + 2 ] - shadow;
+						this.frameBuffer[ buffI + 3 ] = 255;
+					}
+					if( this.frameBuffer[ buffI + 4 ] == 0 ) {
+						this.frameBuffer[ buffI + 4 ] = textureData[ pixelI + 4 ] - shadow;
+						this.frameBuffer[ buffI + 5 ] = textureData[ pixelI + 5 ] - shadow;
+						this.frameBuffer[ buffI + 6 ] = textureData[ pixelI + 6 ] - shadow;
+						this.frameBuffer[ buffI + 7 ] = 255;
+					}
 					
 					buffI  = bufferYcache[ pixel_y + 1 ] + bufferXcache[ pixel_x ];
 					pixelI = textureYCache[ Math.min( py + 1 , textSize - 1 ) ] + bufferXcache[ px ];
 					
-					this.frameBuffer[ buffI - 4 ] = textureData[ pixelI ] - shadow;
-					this.frameBuffer[ buffI - 3 ] = textureData[ pixelI + 1 ] - shadow;
-					this.frameBuffer[ buffI - 2 ] = textureData[ pixelI + 2 ] - shadow;
-					this.frameBuffer[ buffI - 1 ] = 255;
-					
-					this.frameBuffer[ buffI ]     = textureData[ pixelI ] - shadow;
-					this.frameBuffer[ buffI + 1 ] = textureData[ pixelI + 1 ] - shadow;
-					this.frameBuffer[ buffI + 2 ] = textureData[ pixelI + 2 ] - shadow;
-					this.frameBuffer[ buffI + 3 ] = 255;
-					
-					this.frameBuffer[ buffI + 4 ] = textureData[ pixelI + 4 ] - shadow;
-					this.frameBuffer[ buffI + 5 ] = textureData[ pixelI + 5 ] - shadow;
-					this.frameBuffer[ buffI + 6 ] = textureData[ pixelI + 6 ] - shadow;
-					this.frameBuffer[ buffI + 7 ] = 255;
+					if( this.frameBuffer[ buffI - 4 ] == 0 ) {
+						this.frameBuffer[ buffI - 4 ] = textureData[ pixelI ] - shadow;
+						this.frameBuffer[ buffI - 3 ] = textureData[ pixelI + 1 ] - shadow;
+						this.frameBuffer[ buffI - 2 ] = textureData[ pixelI + 2 ] - shadow;
+						this.frameBuffer[ buffI - 1 ] = 255;
+					}
+					//if( this.frameBuffer[ buffI ] == 0 ) {
+						this.frameBuffer[ buffI ]     = textureData[ pixelI ] - shadow;
+						this.frameBuffer[ buffI + 1 ] = textureData[ pixelI + 1 ] - shadow;
+						this.frameBuffer[ buffI + 2 ] = textureData[ pixelI + 2 ] - shadow;
+						this.frameBuffer[ buffI + 3 ] = 255;
+					//}
+					//if( this.frameBuffer[ buffI + 4 ] == 0 ) {
+						this.frameBuffer[ buffI + 4 ] = textureData[ pixelI + 4 ] - shadow;
+						this.frameBuffer[ buffI + 5 ] = textureData[ pixelI + 5 ] - shadow;
+						this.frameBuffer[ buffI + 6 ] = textureData[ pixelI + 6 ] - shadow;
+						this.frameBuffer[ buffI + 7 ] = 255;
+					//}
 				
 				//Шаг
 				way_x += step_x;
