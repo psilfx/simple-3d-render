@@ -9,8 +9,22 @@ function CreateVector3F( x = 0 , y = 0 , z = 0 ) {
 		vector3F[ 2 ] = z;
 	return vector3F;
 }
+function CreatePointUV( x = 0 , y = 0 , u = 0 , v = 0 ) {
+	let point = new Float16Array( 4 );
+		point[ 0 ] = x;
+		point[ 1 ] = y;
+		point[ 2 ] = u;
+		point[ 3 ] = v;
+	return point;
+}
 function CreateVector2F( x = 0 , y = 0 ) {
 	let vector2F = new Float16Array( 2 );
+		vector2F[ 0 ] = x;
+		vector2F[ 1 ] = y;
+	return vector2F;
+}
+function CreateVector2I( x = 0 , y = 0 ) {
+	let vector2F = new Int16Array( 2 );
 		vector2F[ 0 ] = x;
 		vector2F[ 1 ] = y;
 	return vector2F;

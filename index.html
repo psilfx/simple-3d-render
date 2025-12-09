@@ -6,11 +6,13 @@
 		<script src="js/vector.js"></script>
 		<script src="js/render.js"></script>
 		<script src="js/wall.js"></script>
+		<script src="js/level.js"></script>
+		<script src="js/camera.js"></script>
 		<script src="js/lines-extract.js"></script>
 	</head>
 	<body>
 		<canvas id="texture-canvas" width="1280" height="720" style="display: none" ></canvas>
-		<canvas id="render-canvas" width="640" height="360" ></canvas>
+		<canvas id="render-canvas" width="640" height="420" ></canvas>
 		<style>
 			#render-canvas {
 				margin: 0 auto;
@@ -40,18 +42,23 @@
 			const textSize = 64;
 			const wallHMax = height * 2;
 			const render   = new Render();
+			const widthMin = -width * 2;
+			const widthMax = width * 3;
 			
 			
-			let position  = CreateVector3F( 0 , 0.5 , 0 );
+		//	let cameraPosition = CreateVector3F( 0 , 0.5 , 0 );
+			let cameraPosition = CreateVector3F( -0.89501953125 , 0.5 , 5.3515625 );
 			let camNormal = CreateVector3F( 0 , 0 , 0 );
+			const camera  = new Camera( cameraPosition );
 			
 			let cubeVertex = [ 	CreateVector3F( -1 , 0 , 1 ) , CreateVector3F( 1 , 0 , 1 ) ,  CreateVector3F( 1 , 2 , 1 ) , CreateVector3F( -1 , 2 , 1 ) , 
 								CreateVector3F( -1 , 2 , 3 ) , CreateVector3F( 1 , 2 , 3 ) ,  CreateVector3F( 1 , 0 , 3 ) , CreateVector3F( -1 , 0 , 3 ) ];
 			
 			let angleMod   = 1.57;
-			let camAngle   = 0;
+			let camAngle   = angleMod * 0.5;
 			let speed      = 0.2;
 			let minDist    = 1;
+			let visDist    = 10;
 			
 			context.strokeStyle = 'green';
 			context.lineWidth = 1;
@@ -60,7 +67,7 @@
 			const texture = {
 				width: 64,
 				height: 64,
-				data: new Uint8Array(64 * 64 * 4)
+				data: new Uint8Array( 64 * 64 * 4 )
 			};
 
 			
@@ -105,70 +112,55 @@
 			let wall = new Wall( CreateVector3F( 5 , 0 , 5 ) , CreateVector3F( 5.1 , 0 , 5 ) , 0.1 , 1 , img );
 			let wall2 = new Wall( CreateVector3F( 5.9 , 0 , 5 ) , CreateVector3F( 6 , 0 , 5 ) , 0.1 , 1 , img );
 			let wall3 = new Wall( CreateVector3F( 5 , 1 , 5 ) , CreateVector3F( 6 , 1 , 5 ) , 0.1 , 0.1 , img );
-			let wall4 = new Wall( CreateVector3F( 7.25 , -0.5 , 6 ) , CreateVector3F( 7.75 , -0.5 , 6 ) , 0.5 , 0.5 , img );
+			let wall4 = new Wall( CreateVector3F( 7.25 , 0 , 6 ) , CreateVector3F( 7.75 , 0 , 6 ) , 0.5 , 0.5 , img );
 			
-			function RenderCube() {
-				
-
-				render.ReadBuffer();
-				
-				wall4.Rotate( cubeAng );
-				wall.Update();
-				wall2.Update();
-				wall3.Update();
-				wall4.Update();
-				wall.Draw();
-				wall2.Draw();
-				wall3.Draw();
-				wall4.Draw();
-				
-				//render.DrawBG();
+			const level = new Level( 10 , 10 );
+				  level.AddWall( CreateVector3F( 5 , 0 , 5 ) , CreateVector3F( 5.1 , 0 , 5 ) , 0.1 , 1 );
+				  level.AddWall( CreateVector3F( 5.9 , 0 , 5 ) , CreateVector3F( 6 , 0 , 5 ) , 0.1 , 1 );
+				  level.AddWall( CreateVector3F( 5 , 1 , 5 ) , CreateVector3F( 6 , 1 , 5 ) , 0.1 , 0.1 );
+				  level.AddWall( CreateVector3F( 7.25 , 0 , 6 ) , CreateVector3F( 7.75 , 0 , 6 ) , 0.5 , 0.5 );
 			
-				cubeAng += 0.03;
-			}
+			
+			const circleAngle360 = 2 * Math.PI;
+			const PI             = Math.PI;
 			
 			//Основной цикл
 			function Frame() {
 				context.clearRect( 0 , 0 , canvas.width , canvas.height );
-				render.SetProject();
+				
 				
 				<!-- // Приводим угол к диапазону [-PI, PI] -->
-				<!-- while ( camAngle > Math.PI )  camAngle -= 2 * Math.PI; -->
-				<!-- while ( camAngle < -Math.PI ) camAngle += 2 * Math.PI; -->
+				<!-- while ( camera.angle > PI )  camera.angle -= circleAngle360; -->
+				<!-- while ( camera.angle < -PI ) camera.angle += circleAngle360; -->
 				
-				camNormal[ 0 ] = Math.cos( camAngle );
-				camNormal[ 2 ] = Math.sin( camAngle );
+				camera.Update();
 				
-				
-
-				RenderCube();
+				render.ReadBuffer();
+				camera.Draw();
 				render.DrawBuffer()
-
+			//	camera.DrawMap();
 				window.requestAnimationFrame( Frame );
 				
 			}
 			Frame();
 			window.addEventListener( "keydown" , function( e ) {
 				if( e.keyCode == 87 ) {
-					position[ 0 ] += speed * render.project[ 1 ];
-					position[ 2 ] += speed * render.project[ 0 ];
+					camera.MoveForward( 1 );
 				} 
 				if( e.keyCode == 83 ) {
-					position[ 0 ] -= speed * render.project[ 1 ];
-					position[ 2 ] -= speed * render.project[ 0 ];
+					camera.MoveForward( -1 );
 				}
 				if( e.keyCode == 65 ) {
-					position[ 0 ] -= speed * render.project[ 0 ];
-					position[ 2 ] += speed * render.project[ 1 ];
+					camera.MoveStrafe( -1 );
 				} 
 				if( e.keyCode == 68 ){
-					position[ 0 ] += speed * render.project[ 0 ];
-					position[ 2 ] -= speed * render.project[ 1 ];
+					camera.MoveStrafe( 1 );
 				}
 			});
 			window.addEventListener( "mousemove" , function( e ) {
-				if( e.movementX > 0 ) camAngle += 0.01; 
-				if( e.movementX < 0 ) camAngle -= 0.01; 
+				if( e.movementX > 0 ) camera.angle += 0.01; 
+				if( e.movementX < 0 ) camera.angle -= 0.01; 
+				camera.Rotate();
 				
 				//console.log( e.movementX );
 			});

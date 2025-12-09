@@ -105,14 +105,14 @@ class Wall {
 		//console.log( this.transformedNormals[ 0 ] );
 	}
 	UpdateVision() {
-		let front = VectorNormalize3F( SubtractVectorsF( this.center , position ) );
+		let front = VectorNormalize3F( SubtractVectorsF( this.center , cameraPosition ) );
 		//let normal = CreateVector3F( -camNormal[ 0 ] , -camNormal[ 1 ] , -camNormal[ 2 ] );
 		
 		this.visibleSides[ 0 ] = DotVectors( front , this.transformedNormals[ 0 ] );
 		this.visibleSides[ 1 ] = DotVectors( front , this.transformedNormals[ 1 ] );
 		this.visibleSides[ 2 ] = DotVectors( front , this.transformedNormals[ 2 ] );
 		this.visibleSides[ 3 ] = DotVectors( front , this.transformedNormals[ 3 ] );
-		this.visible = DotVectors( front , camNormal );
+		this.visible = DotVectors( front , camera.normal );
 	}
 	IsVisible( point ) {
 		const vx = ( point[ 0 ] >= 0 && point[ 0 ] <= width );
@@ -120,15 +120,15 @@ class Wall {
 		return ( vx && vy );
 	}
 	Update() {
-		this.projPoints[ 0 ] = render.ProjectPoint( this.transformedPoints[ 0 ] , position , this.height );
-		this.projPoints[ 1 ] = render.ProjectPoint( this.transformedPoints[ 1 ] , position , this.height );
-		this.projPoints[ 2 ] = render.ProjectPoint( this.transformedPoints[ 2 ] , position , this.height );
-		this.projPoints[ 3 ] = render.ProjectPoint( this.transformedPoints[ 3 ] , position , this.height );
+		this.projPoints[ 0 ] = render.ProjectPoint( this.transformedPoints[ 0 ] , cameraPosition , this.height );
+		this.projPoints[ 1 ] = render.ProjectPoint( this.transformedPoints[ 1 ] , cameraPosition , this.height );
+		this.projPoints[ 2 ] = render.ProjectPoint( this.transformedPoints[ 2 ] , cameraPosition , this.height );
+		this.projPoints[ 3 ] = render.ProjectPoint( this.transformedPoints[ 3 ] , cameraPosition , this.height );
 		this.UpdateVision();
 	}
 
 	Draw() {
-		//if( this.visible <= 0 ) return;
+		if( this.visible <= 0 ) return;
 		let light1 = Math.max( 255 - 255 * Math.min( this.visibleSides[ 0 ] , 1 ) , 0 );
 		let light2 = Math.max( 255 - 255 * Math.min( this.visibleSides[ 1 ] , 1 ) , 0 );
 		let light3 = 255 - 255 * Math.min( this.visibleSides[ 2 ] , 1 );
@@ -151,31 +151,35 @@ class Wall {
 		if( drawPoints1[ 2 ][ 1 ] <= heightH && 
 			drawPoints1[ 3 ][ 1 ] <= heightH && 
 			drawPoints3[ 2 ][ 1 ] <= heightH && 
-			drawPoints3[ 3 ][ 1 ] <= heightH ) render.RenderTexturedFloorDoomOpt( drawPoints1[ 2 ] , drawPoints1[ 3 ] , drawPoints3[ 2 ] , drawPoints3[ 3 ] , texture.data , lights );
+			drawPoints3[ 3 ][ 1 ] <= heightH ) {
+				render.RenderTexturedFloorDoomOpt( drawPoints1[ 2 ] , drawPoints1[ 3 ] , drawPoints3[ 2 ] , drawPoints3[ 3 ] , texture.data , lights );
+				//render.RenderTriangleScanline( drawPoints1[ 2 ] , drawPoints1[ 3 ] , drawPoints3[ 2 ] , texture.data );
+				//render.RenderTriangleScanline( drawPoints3[ 2 ] , drawPoints3[ 3 ] , drawPoints1[ 3 ] , texture.data );
+			} 
 		
 	}
-	Clip ( p1 , p2 ) {
-		const intersection = CreateVector3F();
-		// Вектор от камеры к точкам
-		const p1_x = p1[ 0 ] - position[ 0 ];
-		const p1_z = p1[ 2 ] - position[ 2 ];
-		const p2_x = p2[ 0 ] - position[ 0 ]; 
-		const p2_z = p2[ 2 ] - position[ 2 ];
+	// Clip ( p1 , p2 ) {
+		// const intersection = CreateVector3F();
+		// // Вектор от камеры к точкам
+		// const p1_x = p1[ 0 ] - cameraPosition[ 0 ];
+		// const p1_z = p1[ 2 ] - cameraPosition[ 2 ];
+		// const p2_x = p2[ 0 ] - cameraPosition[ 0 ]; 
+		// const p2_z = p2[ 2 ] - cameraPosition[ 2 ];
 		
-		// Dot products с направлением камеры
-		const dot1 = p1_x * camNormal[ 0 ] + p1_z * camNormal[ 2 ];
-		const dot2 = p2_x * camNormal[ 0 ] + p2_z * camNormal[ 2 ];
+		// // Dot products с направлением камеры
+		// const dot1 = p1_x * camNormal[ 0 ] + p1_z * camNormal[ 2 ];
+		// const dot2 = p2_x * camNormal[ 0 ] + p2_z * camNormal[ 2 ];
 		
-		// P1 находится на расстоянии dot1 от плоскости
-		// P2 находится на расстоянии dot2 от плоскости
-		// Плоскость находится на расстоянии 0 (прямо перед камерой)
+		// // P1 находится на расстоянии dot1 от плоскости
+		// // P2 находится на расстоянии dot2 от плоскости
+		// // Плоскость находится на расстоянии 0 (прямо перед камерой)
 		
-		// t = расстояние от P1 до плоскости / общее расстояние между точками
-		const t = dot1 / ( dot1 - dot2 );
+		// // t = расстояние от P1 до плоскости / общее расстояние между точками
+		// const t = dot1 / ( dot1 - dot2 );
 		
-		intersection[ 0 ] = p1[ 0 ] + t * ( p2[ 0 ] - p1[ 0 ] );
-		intersection[ 2 ] = p1[ 2 ] + t * ( p2[ 2 ] - p1[ 2 ] );
+		// intersection[ 0 ] = p1[ 0 ] + t * ( p2[ 0 ] - p1[ 0 ] );
+		// intersection[ 2 ] = p1[ 2 ] + t * ( p2[ 2 ] - p1[ 2 ] );
 		
-		return intersection;
-	}
+		// return intersection;
+	// }
 }
