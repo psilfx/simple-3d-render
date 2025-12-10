@@ -1,6 +1,11 @@
 class Cell {
 	key;
 	position;
+	center;
+	centerTop;
+	centerBottom;
+	centerLeft;
+	centerRight;
 	walls;
 	wallsCount = 0;
 	texture;
@@ -14,6 +19,11 @@ class Cell {
 	constructor( x = 0 , y = 0 , key = 0 ) {
 		this.key           = key;
 		this.position      = CreateVector2I( x , y );
+		this.center        = CreateVector3F( x + 0.5 , 0 , y + 0.5 );
+		this.centerTop     = CreateVector3F( x + 0.5 , 0 , y );
+		this.centerBottom  = CreateVector3F( x + 0.5 , 0 , y + 1 );
+		this.centerLeft    = CreateVector3F( x       , 0 , y + 0.5 );
+		this.centerRight   = CreateVector3F( x + 1   , 0 , y + 0.5 );
 		this.walls         = new Int8Array( 10 ); //Максимум 10 стенок на клетку
 		this.line_t        = [ CreateVector3F( x , 0 , y ) , CreateVector3F( x + 1 , 0 , y ) ];
 		this.line_b        = [ CreateVector3F( x , 0 , y + 1 ) , CreateVector3F( x + 1 , 0 , y + 1 ) ];
@@ -32,6 +42,11 @@ class Cell {
 		this.porjectPoints[ 1 ] = render.ProjectPoint( this.line_t[ 1 ] , cameraPosition , 1 );
 		this.porjectPoints[ 2 ] = render.ProjectPoint( this.line_b[ 0 ] , cameraPosition , 1 );
 		this.porjectPoints[ 3 ] = render.ProjectPoint( this.line_b[ 1 ] , cameraPosition , 1 );
+		this.porjectPoints[ 4 ] = render.ProjectPoint( this.center      , cameraPosition , 1 );
+		this.porjectPoints[ 5 ] = render.ProjectPoint( this.centerTop   , cameraPosition , 1 );
+		this.porjectPoints[ 6 ] = render.ProjectPoint( this.centerBottom, cameraPosition , 1 );
+		this.porjectPoints[ 7 ] = render.ProjectPoint( this.centerLeft  , cameraPosition , 1 );
+		this.porjectPoints[ 8 ] = render.ProjectPoint( this.centerRight , cameraPosition , 1 );
 		
 	}
 	
@@ -40,17 +55,36 @@ class Cell {
 		this.drawed = true;
 		let	drawPoints1 = render.GetWallDrawPoints( this.porjectPoints[ 0 ] , this.porjectPoints[ 1 ] );
 		let	drawPoints2 = render.GetWallDrawPoints( this.porjectPoints[ 2 ] , this.porjectPoints[ 3 ] );
+		let	drawCLeft   = render.GetWallDrawPoints( this.porjectPoints[ 7 ] , this.porjectPoints[ 4 ] );
+		let	drawCRight  = render.GetWallDrawPoints( this.porjectPoints[ 4 ] , this.porjectPoints[ 8 ] );
+		let	drawCTop    = render.GetWallDrawPoints( this.porjectPoints[ 5 ] , this.porjectPoints[ 4 ] );
+		let	drawCBottom = render.GetWallDrawPoints( this.porjectPoints[ 4 ] , this.porjectPoints[ 6 ] );
 		
 		let point1 = CreatePointUV( drawPoints1[ 2 ][ 0 ] , drawPoints1[ 2 ][ 1 ] , this.uvPoints[ 0 ][ 0 ] , this.uvPoints[ 0 ][ 1 ] );
 		let point2 = CreatePointUV( drawPoints1[ 3 ][ 0 ] , drawPoints1[ 3 ][ 1 ] , this.uvPoints[ 1 ][ 0 ] , this.uvPoints[ 1 ][ 1 ] );
 		let point3 = CreatePointUV( drawPoints2[ 2 ][ 0 ] , drawPoints2[ 2 ][ 1 ] , this.uvPoints[ 2 ][ 0 ] , this.uvPoints[ 2 ][ 1 ] );
 		let point4 = CreatePointUV( drawPoints2[ 3 ][ 0 ] , drawPoints2[ 3 ][ 1 ] , this.uvPoints[ 3 ][ 0 ] , this.uvPoints[ 3 ][ 1 ] );
+		let center = CreatePointUV( drawCLeft[ 3 ][ 0 ]   , drawCLeft[ 3 ][ 1 ] , 0.5 , 0.5 );
+		let left   = CreatePointUV( drawCLeft[ 2 ][ 0 ]   , drawCLeft[ 2 ][ 1 ] , 0 , 0.5 );
+		let right  = CreatePointUV( drawCRight[ 3 ][ 0 ]  , drawCRight[ 3 ][ 1 ] , 1 , 0.5 );
+		let top    = CreatePointUV( drawCTop[ 2 ][ 0 ]    , drawCTop[ 2 ][ 1 ] , 0.5 , 0 );
+		let bottom = CreatePointUV( drawCBottom[ 3 ][ 0 ] , drawCBottom[ 3 ][ 1 ] , 0.5 , 1 );
 		//if( drawPoints1[ 2 ][ 0 ] < 0 || drawPoints1[ 2 ][ 0 ] > width ) return;
 		//if( drawPoints1[ 3 ][ 0 ] < 0 || drawPoints1[ 3 ][ 0 ] > width ) return;
 		//if( drawPoints2[ 2 ][ 0 ] < 0 || drawPoints2[ 2 ][ 0 ] > width ) return;
 		//if( drawPoints2[ 3 ][ 0 ] < 0 || drawPoints2[ 3 ][ 0 ] > width ) return;
-		render.RenderTexturedFloorDoomOpt( point1 , point2 , point3 , point4 , this.texture.data , this.shadow );
-		
+		//render.RenderTexturedFloorDoomOpt( point1 , point2 , point3 , point4 , this.texture.data , this.shadow );
+		render.RenderTriangleScanline( point1 , top    , center , this.texture.data );
+		render.RenderTriangleScanline( point1 , left   , center , this.texture.data );
+		render.RenderTriangleScanline( point2 , top    , center , this.texture.data );
+		render.RenderTriangleScanline( point2 , right  , center , this.texture.data );
+		render.RenderTriangleScanline( point3 , bottom , center , this.texture.data );
+		render.RenderTriangleScanline( point3 , left   , center , this.texture.data );
+		render.RenderTriangleScanline( point4 , bottom , center , this.texture.data );
+		render.RenderTriangleScanline( point4 , right  , center , this.texture.data );
+		// render.RenderTriangleScanline( center , point2 , point4 , this.texture.data );
+		// render.RenderTriangleScanline( point3 , point4 , center , this.texture.data );
+		// render.RenderTriangleScanline( center , point3 , point1 , this.texture.data );
 		for( let w = 0; w < this.wallsCount; w++ ) {
 			level.walls[ this.walls[ w ] ].Update();
 			level.walls[ this.walls[ w ] ].Draw();

@@ -13,7 +13,7 @@
 	</head>
 	<body>
 		<canvas id="texture-canvas" width="1280" height="720" style="display: none" ></canvas>
-		<canvas id="render-canvas" width="320" height="200" ></canvas>
+		<canvas id="render-canvas" width="640" height="360" ></canvas>
 		<style>
 			#render-canvas {
 				margin: 0 auto;
@@ -26,13 +26,12 @@
 		</style>
 		<script>
 			const canvas   = document.querySelector( "#render-canvas" );
-			const tcanvas   = document.querySelector( "#texture-canvas" );
+			const tcanvas  = document.querySelector( "#texture-canvas" );
 			const context  = canvas.getContext( "2d" , { willReadFrequently: true , alpha: false } );
 			const width    = canvas.width;
 			const height   = canvas.height;
-			const widthH   = parseInt( canvas.width >> 1 );
-			const heightH  = parseInt( canvas.height >> 1 );
-			//const fov      = 1.05; //Угол обзора
+			const widthH   = ( canvas.width >> 1 ) | 0;
+			const heightH  = ( canvas.height >> 1 ) | 0;
 			const fov      = Math.PI / 4; // 45 градусов
 			const fovHalf  = fov * 0.5;
 			const tanHalfFov = Math.tan( fovHalf );
@@ -64,8 +63,11 @@
 			context.strokeStyle = 'green';
 			context.lineWidth = 1;
 			
-			const texture = new Texture( 'img/cube.jpg' );
+			const texture = new Texture( 'img/grass.jpg' );
 				  texture.Load();
+			
+			const cube = new Texture( 'img/cube.jpg' );
+				  cube.Load();
 			
 			const texture1 = new Texture( 'img/cube_1.jpg' );
 				  texture1.Load();
@@ -100,7 +102,7 @@
 				  level.AddWall( CreateVector3F( 5 , 0 , 5 ) , CreateVector3F( 5.1 , 0 , 5 ) , 0.1 , 1 , texture2 );
 				  level.AddWall( CreateVector3F( 5.9 , 0 , 5 ) , CreateVector3F( 6 , 0 , 5 ) , 0.1 , 1 , texture2 );
 				  level.AddWall( CreateVector3F( 5 , 1 , 5 ) , CreateVector3F( 6 , 1 , 5 ) , 0.1 , 0.1 , texture2 );
-				  level.AddWall( CreateVector3F( 7.25 , 0 , 6 ) , CreateVector3F( 7.75 , 0 , 6 ) , 0.5 , 0.5 , texture );
+				  level.AddWall( CreateVector3F( 7.25 , 0 , 6 ) , CreateVector3F( 7.75 , 0 , 6 ) , 0.5 , 0.5 , cube );
 				  level.SetCellTexture( 3 , 3 , texture1 );
 			
 			const circleAngle360 = 2 * Math.PI;
