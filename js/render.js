@@ -57,11 +57,13 @@ class Render {
 		rotated[ 0 ] = camCoords[ 0 ] * camNormal[ 0 ] + camCoords[ 2 ] * camNormal[ 2 ]; //x
 		rotated[ 1 ] = 0; //z
 		rotated[ 2 ] = camCoords[ 0 ] * camNormal[ 2 ] - camCoords[ 2 ] * camNormal[ 0 ]; //z
-		let cosDist =  Math.cos( Math.atan2( camCoords[ 2 ] , camCoords[ 0 ] ) - ( camera.angle ) );
+		let cosDist  = Math.cos( Math.atan2( camCoords[ 2 ] , camCoords[ 0 ] ) - ( camera.angle ) );
+		let distance = Math.hypot( camCoords[ 0 ]  , camCoords[ 2 ] ) * cosDist;
+		//let distance = ( camCoords[ 0 ] * camCoords[ 0 ] + camCoords[ 2 ] * camCoords[ 2 ] ) * cosDist;
 		// Проецируем точку
 		projected[ 0 ] = ( widthH + ( rotated[ 0 ] / rotated[ 2 ] ) * scale ) | 0;
 		projected[ 1 ] = point[ 1 ];
-		projected[ 2 ] = Math.min( wallHMax , ( wallHMax * ( 1 / Math.max( near , Math.hypot( camCoords[ 0 ] , camCoords[ 1 ] , camCoords[ 2 ] ) * cosDist ) ) ) ) | 0; //Полный размер проекции
+		projected[ 2 ] = Math.min( wallHMax , ( wallHMax * ( 1 / Math.max( near , distance ) ) ) ) | 0; //Полный размер проекции
 		projected[ 3 ] = ( projected[ 2 ] * wallHeight ) | 0; //Отмасштабированная стена
 		
 		return projected;
@@ -98,11 +100,12 @@ class Render {
 	}
 	
 	//Упрощённый рендер, так как знаем что нижняя часть всегда парралельна верхней
-	RenderWallPolygonOpt( p1 , p2 , p3 , p4 , textureData , shadow = 0 ) {
+	RenderWallPolygonOpt( p1 , p2 , p3 , p4 , textureData , shadow = 0 , u = 1 , v = 1 ) {
 		//Считаем разницу по x, чтобы отрисовать полоску по x
 		const xStart   = p1[ 0 ];
+		let offset_x   = 0;
 		let xDiff      = p2[ 0 ] - p1[ 0 ];
-		let xDir       = Math.sign( xDiff ); //Запоминаем направление
+		let xDir       = ( xDiff >= 0 ) ? 1 : -1; //Запоминаем направление
 			xDiff      = Math.abs( xDiff | 0 );
 		//Кэш для избежания деления
 		const xDistInv = distInvCache[ xDiff ];
@@ -110,50 +113,55 @@ class Render {
 		const topDist_y = p2[ 1 ] - p1[ 1 ];
 		const botDist_y = p4[ 1 ] - p3[ 1 ];
 		//Считаем шаг по оси y верха и низа
-		const topStep_y = topDist_y * xDistInv;
-		const botStep_y = botDist_y * xDistInv;
+		const topStep_y = ( topDist_y * xDistInv ) * 2;
+		const botStep_y = ( botDist_y * xDistInv ) * 2;
+		const uv_step_x = ( u * xDistInv ) * 2;
 		//Пройденный путь, стартуем с начальной точки
 		let wayTop_y = p1[ 1 ];
 		let wayBot_y = p3[ 1 ];
+		let uv_way_x = 0;
+		let uv_way_y = 0;
 		//Стартуем цикл по оси x
 		for( let x = 0; x <= xDiff; x += 2 ) {
-			let pixel_x  = xStart + x * xDir;
-			let px       = ( textSize * ( x * xDistInv ) ) | 0;
-			let yDiff    = ( wayBot_y - wayTop_y ) | 0;
-			let yDistInv = distInvCache[ yDiff ];
+			let pixel_x     = xStart + x * xDir;
+			if( pixel_x >= width || pixel_x < 0 ) {
+				wayTop_y += topStep_y;
+				wayBot_y += botStep_y;
+				uv_way_x += uv_step_x;
+				if( xDir == 1  && pixel_x >= width ) break;
+				if( xDir == -1 && pixel_x < 0 ) break;
+				continue;
+			} 
+			let px          = ( textSize * uv_way_x ) | 0;
+			let yDiff       = ( wayBot_y - wayTop_y ) | 0;
+			let yDistInv    = distInvCache[ yDiff ];
+			const uv_step_y = v * yDistInv;
+			const offset_y  = ( wayTop_y < 0 ) ? Math.abs( wayTop_y ) : 0;
+			const offset_yb = ( wayBot_y >= height ) ? wayBot_y - height : 0;
+				uv_way_y    = offset_y * uv_step_y;
+			
 			//Красим полоску по y
-			for( let y = 0; y < yDiff; y++ ) {
+			for( let y = offset_y; y < yDiff - offset_yb; y++ ) {
 				let pixel_y = ( wayTop_y + y + 1 ) | 0;
-				let py      = ( textSize * ( y * yDistInv ) ) | 0;
+				let py      = ( textSize * uv_way_y ) | 0;
 				let buffI   = bufferYcache[ pixel_y ] + bufferXcache[ pixel_x ];
-				let buffI2  = bufferYcache[ pixel_y + 1 ] + bufferXcache[ pixel_x ];
+				let buffI2  = bufferYcache[ pixel_y ] + bufferXcache[ pixel_x + 1 * xDir ];
 				let pixelI  = textureYCache[ py ] + bufferXcache[ px ];
-
 				//Красим 2 пикселя
-				this.frameBuffer[ buffI ]     = textureData[ pixelI ] - shadow;
-				this.frameBuffer[ buffI + 1 ] = textureData[ pixelI + 1 ] - shadow;
-				this.frameBuffer[ buffI + 2 ] = textureData[ pixelI + 2 ] - shadow;
-				this.frameBuffer[ buffI + 3 ] = 255;
-				
-				this.frameBuffer[ buffI + 4 ] = textureData[ pixelI + 4 ] - shadow;
-				this.frameBuffer[ buffI + 5 ] = textureData[ pixelI + 5 ] - shadow;
-				this.frameBuffer[ buffI + 6 ] = textureData[ pixelI + 6 ] - shadow;
-				this.frameBuffer[ buffI + 7 ] = 255;
-				
 				this.frameBuffer[ buffI2 ]     = textureData[ pixelI ] - shadow;
 				this.frameBuffer[ buffI2 + 1 ] = textureData[ pixelI + 1 ] - shadow;
 				this.frameBuffer[ buffI2 + 2 ] = textureData[ pixelI + 2 ] - shadow;
 				this.frameBuffer[ buffI2 + 3 ] = 255;
 				
-				this.frameBuffer[ buffI2 + 4 ] = textureData[ pixelI + 4 ] - shadow;
-				this.frameBuffer[ buffI2 + 5 ] = textureData[ pixelI + 5 ] - shadow;
-				this.frameBuffer[ buffI2 + 6 ] = textureData[ pixelI + 6 ] - shadow;
-				this.frameBuffer[ buffI2 + 7 ] = 255;
+				this.frameBuffer[ buffI ]     = textureData[ pixelI ] - shadow;
+				this.frameBuffer[ buffI + 1 ] = textureData[ pixelI + 1 ] - shadow;
+				this.frameBuffer[ buffI + 2 ] = textureData[ pixelI + 2 ] - shadow;
+				this.frameBuffer[ buffI + 3 ] = 255;
+				uv_way_y += uv_step_y;
 			}
 			wayTop_y += topStep_y;
-			wayTop_y += topStep_y;
 			wayBot_y += botStep_y;
-			wayBot_y += botStep_y;
+			uv_way_x += uv_step_x - 1 * ( uv_way_x >= 1 );
 		}
 	}
 	Update() {
@@ -383,7 +391,7 @@ class Render {
 			
 		}
 	}
-	RenderTriangleScanline( p1 , p2 , p3 , textureData ) {
+	RenderTriangleScanline( p1 , p2 , p3 , textureData , shadow = 0 ) {
 		if( ( p1[ 0 ] <= 0 && p2[ 0 ] <= 0 && p3[ 0 ] <= 0 ) ||
 			( p1[ 0 ] >= width && p2[ 0 ] >= width && p3[ 0 ] >= width ) ||
 			( p1[ 1 ] >= height && p2[ 1 ] >= height && p3[ 1 ] >= height ) ||
@@ -464,16 +472,16 @@ class Render {
 				let buffI  = bufferYcache[ y ]   + bufferXcache[ x | 0 ];
 				let pixelI = textureYCache[ py | 0 ] + bufferXcache[ px | 0 ];
 				
-				this.frameBuffer[ buffI ]     = textureData[ pixelI ];
-				this.frameBuffer[ buffI + 1 ] = textureData[ pixelI + 1 ];
-				this.frameBuffer[ buffI + 2 ] = textureData[ pixelI + 2 ];
+				this.frameBuffer[ buffI ]     = textureData[ pixelI ] - shadow;
+				this.frameBuffer[ buffI + 1 ] = textureData[ pixelI + 1 ] - shadow;
+				this.frameBuffer[ buffI + 2 ] = textureData[ pixelI + 2 ] - shadow;
 				this.frameBuffer[ buffI + 3 ] = 255;
 				
 				buffI  = bufferYcache[ y ]   + bufferXcache[ ( x | 0 ) + 1 * x_dir ];
 				
-				this.frameBuffer[ buffI ]     = textureData[ pixelI ];
-				this.frameBuffer[ buffI + 1 ] = textureData[ pixelI + 1 ];
-				this.frameBuffer[ buffI + 2 ] = textureData[ pixelI + 2 ];
+				this.frameBuffer[ buffI ]     = textureData[ pixelI ] - shadow;
+				this.frameBuffer[ buffI + 1 ] = textureData[ pixelI + 1 ] - shadow;
+				this.frameBuffer[ buffI + 2 ] = textureData[ pixelI + 2 ] - shadow;
 				this.frameBuffer[ buffI + 3 ] = 255;
 				
 				uvw_x += uv_s_x;
@@ -523,16 +531,16 @@ class Render {
 				let buffI  = bufferYcache[ y ]   + bufferXcache[ x | 0 ];
 				let pixelI = textureYCache[ py | 0 ] + bufferXcache[ px | 0 ];
 				
-				this.frameBuffer[ buffI ]     = textureData[ pixelI ];
-				this.frameBuffer[ buffI + 1 ] = textureData[ pixelI + 1 ];
-				this.frameBuffer[ buffI + 2 ] = textureData[ pixelI + 2 ];
+				this.frameBuffer[ buffI ]     = textureData[ pixelI ] - shadow;
+				this.frameBuffer[ buffI + 1 ] = textureData[ pixelI + 1 ] - shadow;
+				this.frameBuffer[ buffI + 2 ] = textureData[ pixelI + 2 ] - shadow;
 				this.frameBuffer[ buffI + 3 ] = 255;
 				
 				buffI  = bufferYcache[ y ]   + bufferXcache[ ( x | 0 ) + 1 * x_dir ];
 				
-				this.frameBuffer[ buffI ]     = textureData[ pixelI ];
-				this.frameBuffer[ buffI + 1 ] = textureData[ pixelI + 1 ];
-				this.frameBuffer[ buffI + 2 ] = textureData[ pixelI + 2 ];
+				this.frameBuffer[ buffI ]     = textureData[ pixelI ] - shadow;
+				this.frameBuffer[ buffI + 1 ] = textureData[ pixelI + 1 ] - shadow;
+				this.frameBuffer[ buffI + 2 ] = textureData[ pixelI + 2 ] - shadow;
 				this.frameBuffer[ buffI + 3 ] = 255;
 
 				uvw_x += uv_s_x;

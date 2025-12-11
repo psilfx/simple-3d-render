@@ -103,11 +103,14 @@
 				  level.AddWall( CreateVector3F( 5.9 , 0 , 5 ) , CreateVector3F( 6 , 0 , 5 ) , 0.1 , 1 , texture2 );
 				  level.AddWall( CreateVector3F( 5 , 1 , 5 ) , CreateVector3F( 6 , 1 , 5 ) , 0.1 , 0.1 , texture2 );
 				  level.AddWall( CreateVector3F( 7.25 , 0 , 6 ) , CreateVector3F( 7.75 , 0 , 6 ) , 0.5 , 0.5 , cube );
+				  level.AddWall( CreateVector3F( 5 , 0 , 8 ) , CreateVector3F( 6 , 0 , 8 ) , 0.5 , 1 , cube );
+				  level.AddWall( CreateVector3F( 6 , 0 , 8 ) , CreateVector3F( 7 , 0 , 8 ) , 0.5 , 1 , cube );
+				  level.AddWall( CreateVector3F( 7 , 0 , 8 ) , CreateVector3F( 8 , 0 , 8 ) , 0.5 , 1 , cube );
 				  level.SetCellTexture( 3 , 3 , texture1 );
 			
 			const circleAngle360 = 2 * Math.PI;
 			const PI             = Math.PI;
-			
+			level.Update();
 			//Основной цикл
 			function Frame() {
 				context.clearRect( 0 , 0 , canvas.width , canvas.height );

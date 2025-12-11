@@ -53,6 +53,7 @@ class Cell {
 	Draw() {
 		if( this.drawed ) return;
 		this.drawed = true;
+		const shadow = ( 155 * ( this.distance * distInvCache[ visDist ] ) ) | 0;
 		let	drawPoints1 = render.GetWallDrawPoints( this.porjectPoints[ 0 ] , this.porjectPoints[ 1 ] );
 		let	drawPoints2 = render.GetWallDrawPoints( this.porjectPoints[ 2 ] , this.porjectPoints[ 3 ] );
 		let	drawCLeft   = render.GetWallDrawPoints( this.porjectPoints[ 7 ] , this.porjectPoints[ 4 ] );
@@ -74,17 +75,23 @@ class Cell {
 		//if( drawPoints2[ 2 ][ 0 ] < 0 || drawPoints2[ 2 ][ 0 ] > width ) return;
 		//if( drawPoints2[ 3 ][ 0 ] < 0 || drawPoints2[ 3 ][ 0 ] > width ) return;
 		//render.RenderTexturedFloorDoomOpt( point1 , point2 , point3 , point4 , this.texture.data , this.shadow );
-		render.RenderTriangleScanline( point1 , top    , center , this.texture.data );
-		render.RenderTriangleScanline( point1 , left   , center , this.texture.data );
-		render.RenderTriangleScanline( point2 , top    , center , this.texture.data );
-		render.RenderTriangleScanline( point2 , right  , center , this.texture.data );
-		render.RenderTriangleScanline( point3 , bottom , center , this.texture.data );
-		render.RenderTriangleScanline( point3 , left   , center , this.texture.data );
-		render.RenderTriangleScanline( point4 , bottom , center , this.texture.data );
-		render.RenderTriangleScanline( point4 , right  , center , this.texture.data );
+		render.RenderTriangleScanline( point1 , top    , center , this.texture.data , shadow );
+		render.RenderTriangleScanline( point1 , left   , center , this.texture.data , shadow );
+		render.RenderTriangleScanline( point2 , top    , center , this.texture.data , shadow );
+		render.RenderTriangleScanline( point2 , right  , center , this.texture.data , shadow );
+		render.RenderTriangleScanline( point3 , bottom , center , this.texture.data , shadow );
+		render.RenderTriangleScanline( point3 , left   , center , this.texture.data , shadow );
+		render.RenderTriangleScanline( point4 , bottom , center , this.texture.data , shadow );
+		render.RenderTriangleScanline( point4 , right  , center , this.texture.data , shadow );
 		// render.RenderTriangleScanline( center , point2 , point4 , this.texture.data );
 		// render.RenderTriangleScanline( point3 , point4 , center , this.texture.data );
 		// render.RenderTriangleScanline( center , point3 , point1 , this.texture.data );
+		if( this.wallsCount <= 0 ) return;
+		this.walls.sort( ( a , b ) => {
+			
+			if( a == 0 || b == 0 ) return; 
+			return level.walls[ b ].center[ 1 ] - level.walls[ a ].center[ 1 ];
+		})
 		for( let w = 0; w < this.wallsCount; w++ ) {
 			level.walls[ this.walls[ w ] ].Update();
 			level.walls[ this.walls[ w ] ].Draw();
@@ -123,7 +130,7 @@ class Level {
 		//const dist = Math.sqrt( Math.pow( end[ 0 ] - start[ 0 ] ) + Math.pow( end[ 2 ] - start[ 2 ] ) );
 	}
 	Update() {
-		this.cells.forEach( ( element ) => { element.Update() } );
+		//this.cells.forEach( ( element ) => { element.Update() } );
 	}
 	SetCellTexture( x , y , texture ) {
 		const cell = this.GetCell( x , y );
