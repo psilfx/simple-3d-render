@@ -3,6 +3,8 @@ let bufferXcache; //Для того чтобы избавиться от опе�
 let textureYCache; //Для текстуры можно по одной стороне, они квадратные
 let distInvCache; //Кэш расстояния, чтобы отказаться от деления в циклах
 let distCosCache;
+let zBufferY; //Кэш точки старта отрисовки по y
+let zBufferHeight; //Кэш высоты от точки отрисовки
 
 class Render {
 	
@@ -18,6 +20,9 @@ class Render {
 		textureYCache    = new Uint32Array( textSize );
 		distInvCache     = new Float32Array( 1280 );
 		distCosCache     = new Float16Array( width );
+		zBufferY         = new Uint16Array( width );
+		zBufferHeight    = new Uint16Array( width );
+		
 		let angleStep    = fov / width;
 		for( let y = 0; y < canvas.height; y++ ) {
 			bufferYcache[ y ] = y * ( canvas.width * 4 );
@@ -63,7 +68,7 @@ class Render {
 		// Проецируем точку
 		projected[ 0 ] = ( widthH + ( rotated[ 0 ] / rotated[ 2 ] ) * scale ) | 0;
 		projected[ 1 ] = point[ 1 ];
-		projected[ 2 ] = Math.min( wallHMax , ( wallHMax * ( 1 / Math.max( near , distance ) ) ) ) | 0; //Полный размер проекции
+		projected[ 2 ] = Math.min( wallHCut , ( wallHMax * ( 1 / Math.max( near , distance ) ) ) ) | 0; //Полный размер проекции
 		projected[ 3 ] = ( projected[ 2 ] * wallHeight ) | 0; //Отмасштабированная стена
 		
 		return projected;
@@ -102,7 +107,7 @@ class Render {
 	//Упрощённый рендер, так как знаем что нижняя часть всегда парралельна верхней
 	RenderWallPolygonOpt( p1 , p2 , p3 , p4 , textureData , shadow = 0 , u = 1 , v = 1 ) {
 		//Считаем разницу по x, чтобы отрисовать полоску по x
-		const xStart   = p1[ 0 ];
+		const xStart   = p1[ 0 ] | 0;
 		let offset_x   = 0;
 		let xDiff      = p2[ 0 ] - p1[ 0 ];
 		let xDir       = ( xDiff >= 0 ) ? 1 : -1; //Запоминаем направление
@@ -123,8 +128,17 @@ class Render {
 		let uv_way_y = 0;
 		//Стартуем цикл по оси x
 		for( let x = 0; x <= xDiff; x += 2 ) {
-			let pixel_x     = xStart + x * xDir;
-			if( pixel_x >= width || pixel_x < 0 ) {
+			let pixel_x              = xStart + x * xDir;
+			const offset_y           = ( wayTop_y < 0 ) ? Math.abs( wayTop_y ) : 0;
+			const offset_yb          = ( wayBot_y >= height ) ? wayBot_y - height : 0;
+			let yDiff                = ( wayBot_y - wayTop_y ) | 0;
+			const yStart             = ( wayTop_y + offset_y ) | 0;
+			const yHeight            = yDiff - offset_yb;
+			const secIndex           = pixel_x + 1 * xDir;
+			if( ( pixel_x >= width || pixel_x < 0 ) || 
+				( yStart >= zBufferY[ pixel_x ]  && yStart + yDiff <= zBufferHeight[ pixel_x ] ) || 
+				( yStart >= zBufferY[ secIndex ] && yStart + yDiff <= zBufferHeight[ secIndex ] )
+			) {
 				wayTop_y += topStep_y;
 				wayBot_y += botStep_y;
 				uv_way_x += uv_step_x;
@@ -132,20 +146,20 @@ class Render {
 				if( xDir == -1 && pixel_x < 0 ) break;
 				continue;
 			} 
-			let px          = ( textSize * uv_way_x ) | 0;
-			let yDiff       = ( wayBot_y - wayTop_y ) | 0;
-			let yDistInv    = distInvCache[ yDiff ];
-			const uv_step_y = v * yDistInv;
-			const offset_y  = ( wayTop_y < 0 ) ? Math.abs( wayTop_y ) : 0;
-			const offset_yb = ( wayBot_y >= height ) ? wayBot_y - height : 0;
-				uv_way_y    = offset_y * uv_step_y;
-			
+			let px                    = ( textSize * uv_way_x ) | 0;
+			let yDistInv              = distInvCache[ yDiff ];
+			const uv_step_y           = v * yDistInv;
+				uv_way_y              = offset_y * uv_step_y;
+			zBufferY[ pixel_x ]       = yStart;
+			zBufferHeight[ pixel_x ]  = yStart + yDiff;
+			zBufferY[ secIndex ]      = yStart;
+			zBufferHeight[ secIndex ] = yStart + yDiff;
 			//Красим полоску по y
-			for( let y = offset_y; y < yDiff - offset_yb; y++ ) {
+			for( let y = offset_y; y < yHeight; y++ ) {
 				let pixel_y = ( wayTop_y + y + 1 ) | 0;
 				let py      = ( textSize * uv_way_y ) | 0;
 				let buffI   = bufferYcache[ pixel_y ] + bufferXcache[ pixel_x ];
-				let buffI2  = bufferYcache[ pixel_y ] + bufferXcache[ pixel_x + 1 * xDir ];
+				let buffI2  = bufferYcache[ pixel_y ] + bufferXcache[ secIndex ];
 				let pixelI  = textureYCache[ py ] + bufferXcache[ px ];
 				//Красим 2 пикселя
 				this.frameBuffer[ buffI2 ]     = textureData[ pixelI ] - shadow;
@@ -158,6 +172,7 @@ class Render {
 				this.frameBuffer[ buffI + 2 ] = textureData[ pixelI + 2 ] - shadow;
 				this.frameBuffer[ buffI + 3 ] = 255;
 				uv_way_y += uv_step_y;
+				
 			}
 			wayTop_y += topStep_y;
 			wayBot_y += botStep_y;
@@ -169,8 +184,10 @@ class Render {
 	}
 
 	ReadBuffer() {
-		this.imageData = context.getImageData( 0 , 0 , canvas.width , canvas.height );
+		this.imageData   = context.getImageData( 0 , 0 , canvas.width , canvas.height );
 		this.frameBuffer = this.imageData.data;
+		zBufferY.fill( 0 );
+		zBufferHeight.fill( 0 );
 	}
 	DrawBuffer() {
 		context.putImageData( this.imageData , 0 , 0 );

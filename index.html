@@ -37,10 +37,11 @@
 			const tanHalfFov = Math.tan( fovHalf );
 			const camScale = ( 2 * tanHalfFov );
 			const scale    = width / camScale;
-			const near     = 0.1;
+			const near     = 0.01;
 			const far      = 100;
 			const textSize = 64;
 			const wallHMax = height * 2;
+			const wallHCut = wallHMax * 4;
 			const render   = new Render();
 			const widthMin = -width * 2;
 			const widthMax = width * 3;
