@@ -10,6 +10,7 @@
 		<script src="js/camera.js"></script>
 		<script src="js/texture.js"></script>
 		<script src="js/lines-extract.js"></script>
+		<script src="js/controls.js"></script>
 	</head>
 	<body>
 		<canvas id="texture-canvas" width="1280" height="720" style="display: none" ></canvas>
@@ -30,36 +31,47 @@
 			const context  = canvas.getContext( "2d" , { willReadFrequently: true , alpha: false } );
 			const width    = canvas.width;
 			const height   = canvas.height;
-			const widthH   = ( canvas.width >> 1 ) | 0;
-			const heightH  = ( canvas.height >> 1 ) | 0;
+			const widthH   = ( canvas.width * 0.5 ) | 0;
+			const heightH  = ( canvas.height * 0.5 ) | 0;
 			const fov      = Math.PI / 4; // 45 градусов
 			const fovHalf  = fov * 0.5;
+			const fovStep  = fov / width;
 			const tanHalfFov = Math.tan( fovHalf );
 			const camScale = ( 2 * tanHalfFov );
-			const scale    = width / camScale;
+			//const scale    = ( width / camScale ) | 0;
+			let scale    = ( widthH / tanHalfFov );
+			//const scale    = 400;
 			const near     = 0.01;
 			const far      = 100;
 			const textSize = 64;
 			const wallHMax = height * 2;
 			const wallHCut = wallHMax * 4;
-			const render   = new Render();
+			
 			const widthMin = -width * 2;
 			const widthMax = width * 3;
 			
 			
 		//	let cameraPosition = CreateVector3F( 0 , 0.5 , 0 );
 			let cameraPosition = CreateVector3F( -0.89501953125 , 0.5 , 5.3515625 );
+			const plHeight     = Math.sqrt( cameraPosition[ 1 ] * cameraPosition[ 1 ] );
 			let camNormal = CreateVector3F( 0 , 0 , 0 );
 			const camera  = new Camera( cameraPosition );
+			const camAnim = new CameraMoveAnimation();
 			
 			let cubeVertex = [ 	CreateVector3F( -1 , 0 , 1 ) , CreateVector3F( 1 , 0 , 1 ) ,  CreateVector3F( 1 , 2 , 1 ) , CreateVector3F( -1 , 2 , 1 ) , 
 								CreateVector3F( -1 , 2 , 3 ) , CreateVector3F( 1 , 2 , 3 ) ,  CreateVector3F( 1 , 0 , 3 ) , CreateVector3F( -1 , 0 , 3 ) ];
 			
 			let angleMod   = 1.57;
 			let camAngle   = angleMod * 0.5;
-			let speed      = 0.2;
+			let speed      = 0.1;
+			let rotSpeed   = 0.025;
 			let minDist    = 1;
 			let visDist    = 10;
+			let floorCorrect = 0.1155;
+			let wallCorrect  = 1.09;
+			//let wallCorrect  = 1;
+			const heightStep = visDist / heightH;
+			const render   = new Render();
 			
 			context.strokeStyle = 'green';
 			context.lineWidth = 1;
@@ -99,59 +111,95 @@
 			let cubeAng = 0;
 			let sidesCenter = CreateVector3F( 2.5 , -0.6 , 0.5 );
 			
+			const controls = new Controls();
+			
 			const level = new Level( 10 , 10 );
+				level.AddWall( CreateVector3F( 1 , 0 , 1 ) , CreateVector3F( 2 , 0 , 1 ) , 1 , 1 , texture2 );
+				level.AddWall( CreateVector3F( 2 , 0 , 1 ) , CreateVector3F( 3 , 0 , 1 ) , 1 , 1 , texture2 );
+				level.AddWall( CreateVector3F( 3 , 0 , 1 ) , CreateVector3F( 4 , 0 , 1 ) , 1 , 1 , texture2 );
 				  level.AddWall( CreateVector3F( 5 , 0 , 5 ) , CreateVector3F( 5.1 , 0 , 5 ) , 0.1 , 1 , texture2 );
 				  level.AddWall( CreateVector3F( 5.9 , 0 , 5 ) , CreateVector3F( 6 , 0 , 5 ) , 0.1 , 1 , texture2 );
 				  level.AddWall( CreateVector3F( 5 , 1 , 5 ) , CreateVector3F( 6 , 1 , 5 ) , 0.1 , 0.1 , texture2 );
 				  level.AddWall( CreateVector3F( 7.25 , 0 , 6 ) , CreateVector3F( 7.75 , 0 , 6 ) , 0.5 , 0.5 , cube );
+				  level.AddWall( CreateVector3F( 7.75 , 0 , 6 ) , CreateVector3F( 8.13 , 0 , 6 ) , 0.5 , 0.4 , cube );
+				  level.AddWall( CreateVector3F( 8.13 , 0 , 6 ) , CreateVector3F( 8.43 , 0 , 6 ) , 0.5 , 0.3 , cube );
+				  level.AddWall( CreateVector3F( 8.43 , 0 , 6 ) , CreateVector3F( 8.73 , 0 , 6 ) , 0.5 , 0.2 , cube );
+				  level.AddWall( CreateVector3F( 8.73 , 0 , 6 ) , CreateVector3F( 9.03 , 0 , 6 ) , 0.5 , 0.1 , cube );
+				  
+				  level.AddWall( CreateVector3F( 3 , 0 , 3 ) , CreateVector3F( 4 , 0 , 3 ) , 0.5 , 0.4 , texture1 );
+				  level.AddWall( CreateVector3F( 3 , 0.7 , 3 ) , CreateVector3F( 4 , 0.7 , 3 ) , 0.5 , 0.4 , texture1 );
 				  level.AddWall( CreateVector3F( 5 , 0 , 8 ) , CreateVector3F( 6 , 0 , 8 ) , 0.5 , 1 , cube );
 				  level.AddWall( CreateVector3F( 6 , 0 , 8 ) , CreateVector3F( 7 , 0 , 8 ) , 0.5 , 1 , cube );
 				  level.AddWall( CreateVector3F( 7 , 0 , 8 ) , CreateVector3F( 8 , 0 , 8 ) , 0.5 , 1 , cube );
+				let wall =  level.AddWall( CreateVector3F( 8 , 0 , 8 ) , CreateVector3F( 9 , 0 , 8 ) , 0.1 , 1 , cube );
+					wall.Rotate( 0.785398 );
 				  level.SetCellTexture( 3 , 3 , texture1 );
 			
 			const circleAngle360 = 2 * Math.PI;
 			const PI             = Math.PI;
 			level.Update();
+			let ang = 0;
 			//Основной цикл
 			function Frame() {
 				context.clearRect( 0 , 0 , canvas.width , canvas.height );
-				
+				wall.Rotate( ang );
 				
 				<!-- // Приводим угол к диапазону [-PI, PI] -->
 				<!-- while ( camera.angle > PI )  camera.angle -= circleAngle360; -->
 				<!-- while ( camera.angle < -PI ) camera.angle += circleAngle360; -->
-				
+				controls.Update();
 				camera.Update();
 				
 				render.ReadBuffer();
 				camera.Draw();
-				render.DrawBuffer()
+				render.DrawBuffer();
 			//	camera.DrawMap();
 				window.requestAnimationFrame( Frame );
-				
+				ang += 0.01;
 			}
 			Frame();
 			window.addEventListener( "keydown" , function( e ) {
-				if( e.keyCode == 87 ) {
-					camera.MoveForward( 1 );
-				} 
-				if( e.keyCode == 83 ) {
-					camera.MoveForward( -1 );
+				controls.Input( e.keyCode , true );
+				//console.log( e.keyCode );
+				if( e.keyCode == 81 ){
+					floorCorrect += 0.001;
+					console.log( 'увеличен' , floorCorrect );
 				}
-				if( e.keyCode == 65 ) {
-					camera.MoveStrafe( -1 );
-				} 
-				if( e.keyCode == 68 ){
-					camera.MoveStrafe( 1 );
+				if( e.keyCode == 69 ){
+					floorCorrect -= 0.001;
+					console.log( 'уменьшен' , floorCorrect );
 				}
+				if( e.keyCode == 82 ){
+					wallCorrect += 0.01;
+					console.log( 'увеличен' , wallCorrect );
+				}
+				if( e.keyCode == 84 ){
+					wallCorrect -= 0.01;
+					console.log( 'уменьшен' , wallCorrect );
+				}
+
+				
+			});
+			window.addEventListener( "keyup" , function( e ) {
+				controls.Input( e.keyCode , false );
 			});
 			window.addEventListener( "mousemove" , function( e ) {
-				if( e.movementX > 0 ) camera.angle += 0.01; 
-				if( e.movementX < 0 ) camera.angle -= 0.01; 
-				camera.Rotate();
-				
-				//console.log( e.movementX );
+				controls.Mouse( e.movementX , e.movementY );
 			});
+			document.addEventListener( 'mousedown' , function(event) {
+				controls.MouseButton( event.button , true );
+			});
+			document.addEventListener( 'mouseup' , function(event) {
+				controls.MouseButton( event.button , false );
+			});
+			
+			<!-- window.addEventListener( "mousemove" , function( e ) { -->
+				<!-- if( e.movementX > 0 ) camera.angle += 0.01;  -->
+				<!-- if( e.movementX < 0 ) camera.angle -= 0.01;  -->
+				<!-- camera.Rotate(); -->
+				
+				<!-- //console.log( e.movementX ); -->
+			<!-- }); -->
 			canvas.addEventListener( "click" , async () => {
 					await canvas.requestFullscreen();
 					await canvas.requestPointerLock( {

@@ -61,15 +61,17 @@ class Cell {
 		let	drawCTop    = render.GetWallDrawPoints( this.porjectPoints[ 5 ] , this.porjectPoints[ 4 ] );
 		let	drawCBottom = render.GetWallDrawPoints( this.porjectPoints[ 4 ] , this.porjectPoints[ 6 ] );
 		
-		let point1 = CreatePointUV( drawPoints1[ 2 ][ 0 ] , drawPoints1[ 2 ][ 1 ] , this.uvPoints[ 0 ][ 0 ] , this.uvPoints[ 0 ][ 1 ] );
-		let point2 = CreatePointUV( drawPoints1[ 3 ][ 0 ] , drawPoints1[ 3 ][ 1 ] , this.uvPoints[ 1 ][ 0 ] , this.uvPoints[ 1 ][ 1 ] );
-		let point3 = CreatePointUV( drawPoints2[ 2 ][ 0 ] , drawPoints2[ 2 ][ 1 ] , this.uvPoints[ 2 ][ 0 ] , this.uvPoints[ 2 ][ 1 ] );
-		let point4 = CreatePointUV( drawPoints2[ 3 ][ 0 ] , drawPoints2[ 3 ][ 1 ] , this.uvPoints[ 3 ][ 0 ] , this.uvPoints[ 3 ][ 1 ] );
-		let center = CreatePointUV( drawCLeft[ 3 ][ 0 ]   , drawCLeft[ 3 ][ 1 ] , 0.5 , 0.5 );
-		let left   = CreatePointUV( drawCLeft[ 2 ][ 0 ]   , drawCLeft[ 2 ][ 1 ] , 0 , 0.5 );
-		let right  = CreatePointUV( drawCRight[ 3 ][ 0 ]  , drawCRight[ 3 ][ 1 ] , 1 , 0.5 );
-		let top    = CreatePointUV( drawCTop[ 2 ][ 0 ]    , drawCTop[ 2 ][ 1 ] , 0.5 , 0 );
-		let bottom = CreatePointUV( drawCBottom[ 3 ][ 0 ] , drawCBottom[ 3 ][ 1 ] , 0.5 , 1 );
+		let point1 = CreatePointUVZ( drawPoints1[ 2 ][ 0 ] , drawPoints1[ 2 ][ 1 ] , this.uvPoints[ 0 ][ 0 ] , this.uvPoints[ 0 ][ 1 ] , drawPoints1[ 2 ][ 2 ] );
+		let point2 = CreatePointUVZ( drawPoints1[ 3 ][ 0 ] , drawPoints1[ 3 ][ 1 ] , this.uvPoints[ 1 ][ 0 ] , this.uvPoints[ 1 ][ 1 ] , drawPoints1[ 3 ][ 2 ] );
+		let point3 = CreatePointUVZ( drawPoints2[ 2 ][ 0 ] , drawPoints2[ 2 ][ 1 ] , this.uvPoints[ 2 ][ 0 ] , this.uvPoints[ 2 ][ 1 ] , drawPoints2[ 2 ][ 2 ] );
+		let point4 = CreatePointUVZ( drawPoints2[ 3 ][ 0 ] , drawPoints2[ 3 ][ 1 ] , this.uvPoints[ 3 ][ 0 ] , this.uvPoints[ 3 ][ 1 ] , drawPoints2[ 3 ][ 2 ] );
+		let center = CreatePointUVZ( drawCLeft[ 3 ][ 0 ]   , drawCLeft[ 3 ][ 1 ] , 0.5 , 0.5 , drawCLeft[ 3 ][ 2 ] );
+		let left   = CreatePointUVZ( drawCLeft[ 2 ][ 0 ]   , drawCLeft[ 2 ][ 1 ] , 0 , 0.5 , drawCLeft[ 2 ][ 2 ] );
+		let right  = CreatePointUVZ( drawCRight[ 3 ][ 0 ]  , drawCRight[ 3 ][ 1 ] , 1 , 0.5 , drawCRight[ 3 ][ 2 ] );
+		let top    = CreatePointUVZ( drawCTop[ 2 ][ 0 ]    , drawCTop[ 2 ][ 1 ] , 0.5 , 0 , drawCTop[ 2 ][ 2 ] );
+		let bottom = CreatePointUVZ( drawCBottom[ 3 ][ 0 ] , drawCBottom[ 3 ][ 1 ] , 0.5 , 1 , drawCBottom[ 3 ][ 2 ] );
+		// render.RenderTriangleScanline( point1 , point2 , point3 , this.texture.data , shadow );
+		// render.RenderTriangleScanline( point4 , point3 , point2 , this.texture.data , shadow );
 		//if( drawPoints1[ 2 ][ 0 ] < 0 || drawPoints1[ 2 ][ 0 ] > width ) return;
 		//if( drawPoints1[ 3 ][ 0 ] < 0 || drawPoints1[ 3 ][ 0 ] > width ) return;
 		//if( drawPoints2[ 2 ][ 0 ] < 0 || drawPoints2[ 2 ][ 0 ] > width ) return;
@@ -94,6 +96,7 @@ class Cell {
 		})
 		for( let w = 0; w < this.wallsCount; w++ ) {
 			level.walls[ this.walls[ w ] ].Update();
+			level.walls[ this.walls[ w ] ].distance = this.distance;
 			level.walls[ this.walls[ w ] ].Draw();
 		}
 		//render.RenderTriangleScanline( point1 , point2 , point3 , texture.data );
@@ -127,6 +130,7 @@ class Level {
 		this.walls[ key ] = new Wall( start , end , width , height , texture );
 		let cell = this.GetCell( start[ 0 ] | 0 , start[ 2 ] | 0 );
 			cell.AddWall( key );
+		return this.walls[ key ];
 		//const dist = Math.sqrt( Math.pow( end[ 0 ] - start[ 0 ] ) + Math.pow( end[ 2 ] - start[ 2 ] ) );
 	}
 	Update() {
@@ -144,5 +148,6 @@ class Level {
 	}
 	Draw() {
 		this.cells.forEach( ( element ) => { element.Draw() } );
+		
 	}
 }

@@ -1,3 +1,48 @@
+class CameraMoveAnimation {
+	//Y
+	tdeltaY    = 0;
+	tdeltaYD   = 0;
+	currentY   = 0;
+	targetY    = 10;
+	//X
+	tdeltaX    = 0;
+	tdeltaXD   = 0;
+	currentX   = 0;
+	targetX    = 20;
+	constructor() {
+		
+	}
+	Update() {
+		this.UpdateY();
+		this.UpdateX();
+	}
+	UpdateY() {
+		( this.currentY == 0 ) ? this.tdeltaY += 1 : this.tdeltaY -= 1;
+		if( this.tdeltaY >= this.targetY ) this.currentY = 1;
+		this.tdeltaYD = this.tdeltaY << 1;
+		if( this.tdeltaY <= 0 ) this.currentY = 0;
+	}
+	UpdateX() {
+		( this.currentX == 0 ) ? this.tdeltaX += 1 : this.tdeltaX -= 1;
+		if( this.tdeltaX >= this.targetX ) this.currentX = 1;
+		this.tdeltaXD = this.tdeltaX << 1;
+		if( this.tdeltaX <= 0 ) this.currentX = 0;
+		// ( this.currentX == 0 ) ? this.tdeltaX += 1 : this.tdeltaX -= 1;
+		// if( this.tdeltaX >= this.targetX ){
+			// this.currentX = 1;
+		// } 
+		// this.tdeltaXD = this.tdeltaX << 1;
+		// if( this.tdeltaX <= 0 ) {
+			// this.currentX = 0;
+		// } 
+	}
+	GetOffsetY() {
+		return this.tdeltaY / this.targetY * 0.05;
+	}
+	GetOffsetX() {
+		return ( this.tdeltaX / this.targetX * 10 ) | 0;
+	}
+}
 class Camera {
 	//angle = 1.57 * 0.5;
 	angle = 0;
@@ -27,18 +72,21 @@ class Camera {
 		this.rightView[ 0 ] = visDist * Math.cos( this.angle + fovHalf );
 		this.rightView[ 1 ] = visDist * Math.sin( this.angle + fovHalf );
 	}
-	Rotate() {
+	Rotate( angle = 0 ) {
+		this.angle += angle;
 		this.SetNormal();
 	}
 	MoveForward( direction = 1 ) {
 		this.position[ 0 ] += ( speed * this.normal[ 0 ] ) * direction;
 		this.position[ 2 ] += ( speed * this.normal[ 2 ] ) * direction;
+		
 	}
 	MoveStrafe( direction = 1 ) {
 		
 		let cross = CrossVectorsF( this.normal , this.up );
 		this.position[ 0 ] -= ( speed * cross[ 0 ] ) * direction;
 		this.position[ 2 ] -= ( speed * cross[ 2 ] ) * direction;
+		
 	}
 	IsPointInFrustum( px , py , left , right ) {
         // Вектор от камеры к точке
@@ -241,7 +289,7 @@ class Camera {
 		
 		//this.GetVisibleCells();
 		this.GetVisibleCellsRayBased();
-		this.visibleCells.sort( ( a , b ) => b.distance - a.distance );
+		this.visibleCells.sort( ( a , b ) => a.distance - b.distance );
 		//this.visibleCells.forEach( ( cell ) => { cell.Update() } );
 	}
 	Draw() {
@@ -249,8 +297,40 @@ class Camera {
 		this.visibleCells.forEach( ( cell ) => { 
 			cell.Update();  //В целях оптимизона, там всёравно только проекции, всё что связано с отображением
 			cell.Draw();
-		} 
+		}
 		);
+		return;
+		let shadow = 0;
+		for( let w = 0; w < width; w++ ) {
+			shadow = 155;
+			const cr_a = ( camera.angle ) - fovHalf + w * fovStep; // rel_x * fovHalf;
+			const cos  = Math.cos( cr_a );
+			const sin  = Math.sin( cr_a );
+			for( let h = 0; h < heightH; h++ ) {
+				const y = h;
+				let buffI  = bufferYcache[ heightH + y ] + bufferXcache[ w ];
+
+				const dist    = ( ( ( h ) * heightStep ) ) * Math.cos( cr_a - camera.angle );
+				const cr_d    = ( cameraPosition[ 1 ] / dist ) * scale * floorCorrect;
+				const world_x = camera.position[ 0 ] + cos * cr_d;
+				const world_y = -camera.position[ 2 ] - sin * cr_d;
+				
+				const px = Math.abs( ( world_x - ( world_x | 0 ) ) * 63 ) | 0;
+				const py = Math.abs( ( world_y - ( world_y | 0 ) ) * 63 ) | 0;
+				
+				let pixelI = textureYCache[ py | 0 ] + bufferXcache[ px | 0 ];
+				
+				//if( zBuffer[ buffI ] > cr_d  ) {
+				if( !render.frameBuffer[ buffI ] ) {
+					render.frameBuffer[ buffI ]     = texture.data[ pixelI ] - shadow;
+					render.frameBuffer[ buffI + 1 ] = texture.data[ pixelI + 1 ] - shadow;
+					render.frameBuffer[ buffI + 2 ] = texture.data[ pixelI + 2 ] - shadow;
+					render.frameBuffer[ buffI + 3 ] = 255;
+					zBuffer[ buffI ] = dist;
+				}
+				shadow -= 1;
+			}
+		}
 	}
 	DrawMap() {
 		let cellWidth = 10;

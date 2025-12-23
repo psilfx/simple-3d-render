@@ -17,6 +17,15 @@ function CreatePointUV( x = 0 , y = 0 , u = 0 , v = 0 ) {
 		point[ 3 ] = v;
 	return point;
 }
+function CreatePointUVZ( x = 0 , y = 0 , u = 0 , v = 0 , z = 0 ) {
+	let point = new Float16Array( 5 );
+		point[ 0 ] = x;
+		point[ 1 ] = y;
+		point[ 2 ] = u;
+		point[ 3 ] = v;
+		point[ 4 ] = z;
+	return point;
+}
 function CreateVector2F( x = 0 , y = 0 ) {
 	let vector2F = new Float16Array( 2 );
 		vector2F[ 0 ] = x;
