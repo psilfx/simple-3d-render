@@ -10,6 +10,7 @@ class Wall {
 	transformedPoints;
 	transformedNormals;
 	visibleSides;
+	visibleLights;
 	visiblePoints;
 	uvPoints;
 	visible = false;
@@ -26,9 +27,15 @@ class Wall {
 	
 	drawedPoints;
 	distance = 0;
+	wallLength = 0;
+	
+	light;
+	light_position;
+	light_color;
 	
 	constructor( pointStart , pointEnd , width , height , texture ) {
-		const wallLength        = DistanceVectorsF( pointStart , pointEnd );
+		this.light_color        = ColorRGB( 0 , 0 , 0 );
+		this.wallLength         = DistanceVectorsF( pointStart , pointEnd );
 		this.width              = width;
 		this.height             = height;
 		this.texture            = texture;
@@ -37,24 +44,51 @@ class Wall {
 		this.transformedNormals = [ CreateVector3F() , CreateVector3F() , CreateVector3F() , CreateVector3F() ];
 		this.projPoints         = [ CreateVector3F() , CreateVector3F() , CreateVector3F() , CreateVector3F() ];
 		this.drawedPoints       = [ CreateVector2F() , CreateVector2F() , CreateVector2F() , CreateVector2F() ];
-		this.uvPoints           = [ CreateVector2F( wallLength , height ) , CreateVector2F( width , height ) , CreateVector2F( wallLength , height ) , CreateVector2F( width , height )  ];
+		this.uvPoints           = [ CreateVector2F( this.wallLength , height ) , CreateVector2F( width , height ) , CreateVector2F( this.wallLength , height ) , CreateVector2F( width , height )  ];
 		this.visibleSides       = [ false , false , false , false ];
 		this.visiblePoints      = [ false , false , false , false ];
+		this.visibleLights      = [ 0 , 0 , 0 , 0 , 0 ];
 		this.CreateWallPoints( pointStart , pointEnd );
 		this.CalcCenter();
 		this.CreateWallNormals();
 		this.SetTransformCoords();
 		this.Transform();
 		this.CreateLinks();
+		this.SetLight( CreateVector3F() , ColorRGB( 0 , 0 , 0 ) );
+	}
+	
+	SetLight( position , color ) {
+		this.light_position = position;
+		this.light_color    = color;
+		this.CalcLight();
+	}
+	CalcLight() {
+		const front = VectorNormalize3F( SubtractVectorsF( this.center , this.light_position ) );
+		const dist  = 1 / DistanceVectorsF( this.light_position , this.center );
+		const dot0  = DotVectors( front , this.transformedNormals[ 0 ] );
+		const dot1  = DotVectors( front , this.transformedNormals[ 1 ] );
+		const dot2  = DotVectors( front , this.transformedNormals[ 2 ] );
+		const dot3  = DotVectors( front , this.transformedNormals[ 3 ] );
+		const dot4  = DotVectors( front , this.normals[ 4 ] );
+		const dot5  = DotVectors( front , this.normals[ 5 ] );
+		this.visibleLights[ 0 ] = MultiplyColorRGB( this.light_color , dot0 > 0 ? dot0 * dist : 0 );
+		this.visibleLights[ 1 ] = MultiplyColorRGB( this.light_color , dot1 > 0 ? dot1 * dist : 0 );
+		this.visibleLights[ 2 ] = MultiplyColorRGB( this.light_color , dot2 > 0 ? dot2 * dist : 0 );
+		this.visibleLights[ 3 ] = MultiplyColorRGB( this.light_color , dot3 > 0 ? dot3 * dist : 0 );
+		this.visibleLights[ 4 ] = MultiplyColorRGB( this.light_color , dot4 > 0 ? dot4 * dist : 0 );
+		this.visibleLights[ 5 ] = MultiplyColorRGB( this.light_color , dot5 > 0 ? dot5 * dist : 0 );
 	}
 	
 	CreateWallPoints( p1 , p2 ) {
 		let subtract = SubtractVectorsF( p2 , p1 );
-		if( Math.abs( subtract[ 0 ] ) > Math.abs( subtract[ 2 ] ) ) {
-			this.points = [ p1 , p2 , CreateVector3F( p1[ 0 ] , p1[ 1 ] , p1[ 2 ] + this.width ) , CreateVector3F( p2[ 0 ] , p2[ 1 ] , p2[ 2 ] + this.width ) ];
-		} else {
-			this.points = [ p1 , p2 , CreateVector3F( p1[ 0 ] + this.width , p1[ 1 ] , p1[ 2 ] ) , CreateVector3F( p2[ 0 ] + this.width , p2[ 1 ] , p2[ 2 ] ) ];
-		}
+		//if( Math.abs( subtract[ 0 ] ) > Math.abs( subtract[ 2 ] ) ) {
+			const wall_angle = Math.atan2( p2[ 2 ] - p1[ 2 ] , p2[ 0 ] - p1[ 0 ] );
+			this.points = [ p1 , p2 , 
+							CreateVector3F( p1[ 0 ] + Math.cos( wall_angle + 1.57 ) * this.width , p1[ 1 ] , p1[ 2 ] + Math.sin( wall_angle + 1.57 ) * this.width ) ,
+							CreateVector3F( p2[ 0 ] + Math.cos( wall_angle + 1.57 ) * this.width , p2[ 1 ] , p2[ 2 ] + Math.sin( wall_angle + 1.57 ) * this.width ) ];
+		// } else {
+			// this.points = [ p1 , p2 , CreateVector3F( p1[ 0 ] + this.width , p1[ 1 ] , p1[ 2 ] ) , CreateVector3F( p2[ 0 ] + this.width , p2[ 1 ] , p2[ 2 ] ) ];
+		// }
 	}
 	CreateWallNormals() {
 		this.normals = [];
@@ -77,6 +111,7 @@ class Wall {
 		this.angle = angle;
 		this.SetTransformCoords();
 		this.Transform();
+		this.CalcLight();
 	}
 	
 	CalcCenter() {
@@ -149,20 +184,13 @@ class Wall {
 
 	Draw() {
 		if( this.visible <= 0 ) return;
-		// let light1 = Math.max( 255 - 255 * Math.min( this.visibleSides[ 0 ] , 1 ) , 0 );
-		// let light2 = Math.max( 255 - 255 * Math.min( this.visibleSides[ 1 ] , 1 ) , 0 );
-		// let light3 = 255 - 255 * Math.min( this.visibleSides[ 2 ] , 1 );
-		// let light4 = 255 - 255 * Math.min( this.visibleSides[ 3 ] , 1 );
-		// let lights = [ light1 , light1 , light2 , light2 ];
 		const shadow = ( 155 * ( this.distance * distInvCache[ visDist ] ) ) | 0;
-		let	drawPoints1 = render.GetWallDrawPoints( this.projPoints[ 0 ] , this.projPoints[ 1 ] );
-		let	drawPoints3 = render.GetWallDrawPoints( this.projPoints[ 2 ] , this.projPoints[ 3 ] );
-		let	drawPoints5 = render.GetWallDrawPoints( this.projPoints[ 4 ] , this.projPoints[ 8 ] );
-		let	drawPoints6 = render.GetWallDrawPoints( this.projPoints[ 5 ] , this.projPoints[ 8 ] );
-		let	drawPoints7 = render.GetWallDrawPoints( this.projPoints[ 6 ] , this.projPoints[ 8 ] );
-		let	drawPoints8 = render.GetWallDrawPoints( this.projPoints[ 7 ] , this.projPoints[ 8 ] );
-		
-		//console.log( this.projPoints[ 0 ] );
+		let	drawPoints1 = render.GetWallDrawPoints( this.projPoints[ 0 ] , this.projPoints[ 1 ] ); //Front
+		let	drawPoints3 = render.GetWallDrawPoints( this.projPoints[ 2 ] , this.projPoints[ 3 ] ); //Back
+		let	drawPoints5 = render.GetWallDrawPoints( this.projPoints[ 4 ] , this.projPoints[ 8 ] ); //Fcenter
+		let	drawPoints6 = render.GetWallDrawPoints( this.projPoints[ 5 ] , this.projPoints[ 8 ] ); //Bcenter
+		let	drawPoints7 = render.GetWallDrawPoints( this.projPoints[ 6 ] , this.projPoints[ 8 ] ); //Lcenter
+		let	drawPoints8 = render.GetWallDrawPoints( this.projPoints[ 7 ] , this.projPoints[ 8 ] ); //Rcenter
 		if( this.visibleSides[ 0 ] > 0 ) {
 			//Квадрат
 			let point1 = CreatePointUVZ( drawPoints1[ 0 ][ 0 ] , drawPoints1[ 0 ][ 1 ] , 0                       , 0 , drawPoints1[ 0 ][ 2 ] );
@@ -172,11 +200,9 @@ class Wall {
 			//Центральные точки
 			let point5 = CreatePointUVZ( drawPoints5[ 0 ][ 0 ] , drawPoints5[ 0 ][ 1 ] , this.uvPoints[ 0 ][ 0 ] * 0.5 , 0 , drawPoints5[ 0 ][ 2 ] );
 			let point6 = CreatePointUVZ( drawPoints5[ 2 ][ 0 ] , drawPoints5[ 2 ][ 1 ] , this.uvPoints[ 0 ][ 0 ] * 0.5 , this.height , drawPoints5[ 2 ][ 2 ] );
-			
-			render.RenderWallPolygonOpt( point1 , point5 , point3 , point6 , this.texture.data , shadow );
-			render.RenderWallPolygonOpt( point5 , point2 , point6 , point4 , this.texture.data , shadow );
-		}		
-		
+			render.RenderWallPolygonOpt( point1 , point5 , point3 , point6 , this.texture.data , shadow , this.visibleLights[ 0 ] );
+			render.RenderWallPolygonOpt( point5 , point2 , point6 , point4 , this.texture.data , shadow , this.visibleLights[ 0 ] );
+		}
 		if( this.visibleSides[ 2 ] > 0 ) {
 			let point1 = CreatePointUVZ( drawPoints1[ 0 ][ 0 ] , drawPoints1[ 0 ][ 1 ] , 0                       , 0 , drawPoints1[ 0 ][ 2 ] );
 			let point2 = CreatePointUVZ( drawPoints3[ 0 ][ 0 ] , drawPoints3[ 0 ][ 1 ] , this.width , 0 , drawPoints3[ 0 ][ 2 ] );
@@ -185,10 +211,9 @@ class Wall {
 			//Центральные точки
 			let point5 = CreatePointUVZ( drawPoints7[ 0 ][ 0 ] , drawPoints7[ 0 ][ 1 ] , this.width * 0.5 , 0 , drawPoints7[ 0 ][ 2 ] );
 			let point6 = CreatePointUVZ( drawPoints7[ 2 ][ 0 ] , drawPoints7[ 2 ][ 1 ] , this.width * 0.5 , this.height , drawPoints7[ 2 ][ 2 ] );
-			render.RenderWallPolygonOpt( point1 , point5 , point3 , point6 , this.texture.data , shadow );
-			render.RenderWallPolygonOpt( point5 , point2 , point6 , point4 , this.texture.data , shadow );
+			render.RenderWallPolygonOpt( point1 , point5 , point3 , point6 , this.texture.data , shadow , this.visibleLights[ 2 ] );
+			render.RenderWallPolygonOpt( point5 , point2 , point6 , point4 , this.texture.data , shadow , this.visibleLights[ 2 ] );
 		}
-		
 		if( this.visibleSides[ 1 ] > 0 ) {
 			let point1 = CreatePointUVZ( drawPoints3[ 0 ][ 0 ] , drawPoints3[ 0 ][ 1 ] , 0                       , 0 , drawPoints3[ 0 ][ 2 ] );
 			let point2 = CreatePointUVZ( drawPoints3[ 1 ][ 0 ] , drawPoints3[ 1 ][ 1 ] , this.uvPoints[ 0 ][ 0 ] , 0 , drawPoints3[ 1 ][ 2 ] );
@@ -197,13 +222,11 @@ class Wall {
 			//Центральные точки
 			let point5 = CreatePointUVZ( drawPoints6[ 0 ][ 0 ] , drawPoints6[ 0 ][ 1 ] , this.uvPoints[ 0 ][ 0 ] * 0.5 , 0 , drawPoints6[ 0 ][ 2 ] );
 			let point6 = CreatePointUVZ( drawPoints6[ 2 ][ 0 ] , drawPoints6[ 2 ][ 1 ] , this.uvPoints[ 0 ][ 0 ] * 0.5 , this.height , drawPoints6[ 2 ][ 2 ] );
-			render.RenderWallPolygonOpt( point1 , point5 , point3 , point6 , this.texture.data , shadow );
-			render.RenderWallPolygonOpt( point5 , point2 , point6 , point4 , this.texture.data , shadow );
+			render.RenderWallPolygonOpt( point1 , point5 , point3 , point6 , this.texture.data , shadow , this.visibleLights[ 1 ] );
+			render.RenderWallPolygonOpt( point5 , point2 , point6 , point4 , this.texture.data , shadow , this.visibleLights[ 1 ] );
 		} 
-		
 		if( this.visibleSides[ 3 ] > 0 ) {
 			 render.RenderWallPolygonOpt( drawPoints1[ 1 ] , drawPoints3[ 1 ] , drawPoints1[ 3 ] , drawPoints3[ 3 ] , this.texture.data , shadow , this.uvPoints[ 1 ][ 0 ] , this.uvPoints[ 1 ][ 1 ] );
-			 
 			let point1 = CreatePointUVZ( drawPoints1[ 1 ][ 0 ] , drawPoints1[ 1 ][ 1 ] , 0                       , 0 , drawPoints1[ 1 ][ 2 ] );
 			let point2 = CreatePointUVZ( drawPoints3[ 1 ][ 0 ] , drawPoints3[ 1 ][ 1 ] , this.width , 0 , drawPoints3[ 1 ][ 2 ] );
 			let point3 = CreatePointUVZ( drawPoints1[ 3 ][ 0 ] , drawPoints1[ 3 ][ 1 ] , 0                       , this.height , drawPoints1[ 3 ][ 2 ] );
@@ -211,19 +234,15 @@ class Wall {
 			//Центральные точки
 			let point5 = CreatePointUVZ( drawPoints8[ 0 ][ 0 ] , drawPoints8[ 0 ][ 1 ] , this.width * 0.5 , 0 , drawPoints8[ 0 ][ 2 ] );
 			let point6 = CreatePointUVZ( drawPoints8[ 2 ][ 0 ] , drawPoints8[ 2 ][ 1 ] , this.width * 0.5 , this.height , drawPoints8[ 2 ][ 2 ] );
-			render.RenderWallPolygonOpt( point1 , point5 , point3 , point6 , this.texture.data , shadow );
-			render.RenderWallPolygonOpt( point5 , point2 , point6 , point4 , this.texture.data , shadow );
+			render.RenderWallPolygonOpt( point1 , point5 , point3 , point6 , this.texture.data , shadow , this.visibleLights[ 3 ] );
+			render.RenderWallPolygonOpt( point5 , point2 , point6 , point4 , this.texture.data , shadow , this.visibleLights[ 3 ] );
 		} 
-		
 		if( !this.visibleSides[ 0 ] || !this.visibleSides[ 1 ] ) return;
 		//Потолок
 		if( drawPoints1[ 0 ][ 1 ] > heightH && 
 			drawPoints1[ 1 ][ 1 ] > heightH && 
 			drawPoints3[ 0 ][ 1 ] > heightH && 
 			drawPoints3[ 1 ][ 1 ] > heightH ) {
-				
-				
-				
 				let point1 = CreatePointUVZ( drawPoints1[ 0 ][ 0 ] , drawPoints1[ 0 ][ 1 ] , 0                       , 0 , drawPoints1[ 0 ][ 2 ] );
 				let point2 = CreatePointUVZ( drawPoints1[ 1 ][ 0 ] , drawPoints1[ 1 ][ 1 ] , this.uvPoints[ 0 ][ 0 ] , 0 , drawPoints1[ 1 ][ 2 ] );
 				let point3 = CreatePointUVZ( drawPoints3[ 0 ][ 0 ] , drawPoints3[ 0 ][ 1 ] , 0                       , this.width , drawPoints3[ 0 ][ 2 ] );
@@ -233,23 +252,20 @@ class Wall {
 				let point7 = CreatePointUVZ( drawPoints7[ 0 ][ 0 ] , drawPoints7[ 0 ][ 1 ] , 0 , this.width * 0.5 , drawPoints7[ 0 ][ 2 ] );
 				let point8 = CreatePointUVZ( drawPoints8[ 0 ][ 0 ] , drawPoints8[ 0 ][ 1 ] , this.uvPoints[ 0 ][ 0 ] , this.width * 0.5 , drawPoints8[ 0 ][ 2 ] );
 				let point9 = CreatePointUVZ( drawPoints8[ 1 ][ 0 ] , drawPoints8[ 1 ][ 1 ] , this.uvPoints[ 0 ][ 0 ] * 0.5 , this.width * 0.5 , drawPoints8[ 1 ][ 2 ] );
-				
-				//render.RenderTexturedFloorDoomOpt( point1 , point2 , point3 , point4 , this.texture.data , shadow );
-				render.RenderTriangleScanline( point1 , point5 , point9 , this.texture.data , shadow );
-				render.RenderTriangleScanline( point9 , point7 , point1 , this.texture.data , shadow );
-				render.RenderTriangleScanline( point7 , point3 , point6 , this.texture.data , shadow );
-				render.RenderTriangleScanline( point6 , point9 , point7 , this.texture.data , shadow );
-				render.RenderTriangleScanline( point5 , point9 , point2 , this.texture.data , shadow );
-				render.RenderTriangleScanline( point2 , point8 , point9 , this.texture.data , shadow );
-				render.RenderTriangleScanline( point6 , point4 , point9 , this.texture.data , shadow );
-				render.RenderTriangleScanline( point9 , point8 , point4 , this.texture.data , shadow );
+				render.RenderTriangleScanline( point1 , point5 , point9 , this.texture.data , shadow , this.visibleLights[ 5 ] );
+				render.RenderTriangleScanline( point9 , point7 , point1 , this.texture.data , shadow , this.visibleLights[ 5 ] );
+				render.RenderTriangleScanline( point7 , point3 , point6 , this.texture.data , shadow , this.visibleLights[ 5 ] );
+				render.RenderTriangleScanline( point6 , point9 , point7 , this.texture.data , shadow , this.visibleLights[ 5 ] );
+				render.RenderTriangleScanline( point5 , point9 , point2 , this.texture.data , shadow , this.visibleLights[ 5 ] );
+				render.RenderTriangleScanline( point2 , point8 , point9 , this.texture.data , shadow , this.visibleLights[ 5 ] );
+				render.RenderTriangleScanline( point6 , point4 , point9 , this.texture.data , shadow , this.visibleLights[ 5 ] );
+				render.RenderTriangleScanline( point9 , point8 , point4 , this.texture.data , shadow , this.visibleLights[ 5 ] );
 			} 
 		//Пол
 		if( drawPoints1[ 2 ][ 1 ] < heightH && 
 			drawPoints1[ 3 ][ 1 ] < heightH && 
 			drawPoints3[ 2 ][ 1 ] < heightH && 
 			drawPoints3[ 3 ][ 1 ] < heightH ) {
-
 				let point1 = CreatePointUVZ( drawPoints1[ 2 ][ 0 ] , drawPoints1[ 2 ][ 1 ] , 0                       , 0 , drawPoints1[ 2 ][ 2 ] );
 				let point2 = CreatePointUVZ( drawPoints1[ 3 ][ 0 ] , drawPoints1[ 3 ][ 1 ] , this.uvPoints[ 0 ][ 0 ] , 0 , drawPoints1[ 3 ][ 2 ] );
 				let point3 = CreatePointUVZ( drawPoints3[ 2 ][ 0 ] , drawPoints3[ 2 ][ 1 ] , 0                       , this.width , drawPoints3[ 2 ][ 2 ] );
@@ -259,20 +275,14 @@ class Wall {
 				let point7 = CreatePointUVZ( drawPoints7[ 2 ][ 0 ] , drawPoints7[ 2 ][ 1 ] , 0 , this.width * 0.5 , drawPoints7[ 2 ][ 2 ] );
 				let point8 = CreatePointUVZ( drawPoints8[ 2 ][ 0 ] , drawPoints8[ 2 ][ 1 ] , this.uvPoints[ 0 ][ 0 ] , this.width * 0.5 , drawPoints8[ 2 ][ 2 ] );
 				let point9 = CreatePointUVZ( drawPoints8[ 3 ][ 0 ] , drawPoints8[ 3 ][ 1 ] , this.uvPoints[ 0 ][ 0 ] * 0.5 , this.width * 0.5 , drawPoints8[ 3 ][ 2 ] );
-				
-				//render.RenderTexturedFloorDoomOpt( point1 , point2 , point3 , point4 , this.texture.data , shadow );
-				render.RenderTriangleScanline( point1 , point5 , point9 , this.texture.data , shadow );
-				render.RenderTriangleScanline( point9 , point7 , point1 , this.texture.data , shadow );
-				render.RenderTriangleScanline( point7 , point3 , point6 , this.texture.data , shadow );
-				render.RenderTriangleScanline( point6 , point9 , point7 , this.texture.data , shadow );
-				render.RenderTriangleScanline( point5 , point9 , point2 , this.texture.data , shadow );
-				render.RenderTriangleScanline( point2 , point8 , point9 , this.texture.data , shadow );
-				render.RenderTriangleScanline( point6 , point4 , point9 , this.texture.data , shadow );
-				render.RenderTriangleScanline( point9 , point8 , point4 , this.texture.data , shadow );
-				//render.RenderTexturedFloorDoomOpt( point1 , point2 , point3 , point4 , this.texture.data , shadow );
-				//render.RenderTexturedFloorDoomOpt( drawPoints1[ 2 ] , drawPoints1[ 3 ] , drawPoints3[ 2 ] , drawPoints3[ 3 ] , texture.data , lights );
-				//render.RenderTriangleScanline( drawPoints1[ 2 ] , drawPoints1[ 3 ] , drawPoints3[ 2 ] , texture.data );
-				//render.RenderTriangleScanline( drawPoints3[ 2 ] , drawPoints3[ 3 ] , drawPoints1[ 3 ] , texture.data );
+				render.RenderTriangleScanline( point1 , point5 , point9 , this.texture.data , shadow , this.visibleLights[ 4 ] );
+				render.RenderTriangleScanline( point9 , point7 , point1 , this.texture.data , shadow , this.visibleLights[ 4 ] );
+				render.RenderTriangleScanline( point7 , point3 , point6 , this.texture.data , shadow , this.visibleLights[ 4 ] );
+				render.RenderTriangleScanline( point6 , point9 , point7 , this.texture.data , shadow , this.visibleLights[ 4 ] );
+				render.RenderTriangleScanline( point5 , point9 , point2 , this.texture.data , shadow , this.visibleLights[ 4 ] );
+				render.RenderTriangleScanline( point2 , point8 , point9 , this.texture.data , shadow , this.visibleLights[ 4 ] );
+				render.RenderTriangleScanline( point6 , point4 , point9 , this.texture.data , shadow , this.visibleLights[ 4 ] );
+				render.RenderTriangleScanline( point9 , point8 , point4 , this.texture.data , shadow , this.visibleLights[ 4 ] );
 			} 
 		
 	}

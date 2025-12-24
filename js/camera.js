@@ -195,66 +195,6 @@ class Camera {
 	}
 	GetVisibleCells() {
 		this.visibleCells = [];
-		
-		// const left   = CreateVector2F( this.position[ 0 ] + this.leftView[ 0 ] , this.position[ 2 ] + this.leftView[ 1 ] );
-		// const right  = CreateVector2F( this.position[ 0 ] + this.rightView[ 0 ] , this.position[ 2 ] + this.rightView[ 1 ] );
-
-		// const dir1_x  = left[ 0 ]  - this.position[ 0 ];
-		// const dir2_x  = right[ 0 ] - this.position[ 0 ];
-		// const dir1_y  = left[ 1 ]  - this.position[ 2 ];
-		// const dir2_y  = right[ 1 ] - this.position[ 2 ];
-		
-		// const dist1   = Math.max( Math.abs( dir1_x ) , Math.abs( dir1_y ) );
-		// const dist2   = Math.max( Math.abs( dir2_x ) , Math.abs( dir2_y ) );
-		// const dist    = Math.max( dist1 , dist2 );
-		// const distI   = distInvCache[ dist | 0 ];
-		
-		// const step1_x = dir1_x * distI;
-		// const step1_y = dir1_y * distI;
-		// const step2_x = dir2_x * distI;
-		// const step2_y = dir2_y * distI;
-		
-		// let way1_x = 0;
-		// let way1_y = 0;
-		// let way2_x = 0;
-		// let way2_y = 0;
-		
-		// const start_x = this.position[ 0 ];
-		// const start_y = this.position[ 2 ];
-		
-		// for( let d = 0; d < dist; d++ ) {
-			// //Считаем старт лини от основания
-			// const in_start_x = start_x + way1_x;
-			// const in_start_y = start_y + way1_y;
-			// const in_end_x   = start_x + way2_x;
-			// const in_end_y   = start_y + way2_y;
-			
-			// //Считаем направление закраски линии
-			// const dir_x = in_end_x - in_start_x;
-			// const dir_y = in_end_y - in_start_y;
-			
-			// const in_dist  = Math.max( Math.abs( dir_x ) , Math.abs( dir_y ) );
-			// const in_distI = distInvCache[ in_dist | 0 ];
-			
-			// const step_x = dir_x * in_distI;
-			// const step_y = dir_y * in_distI;
-			
-			// //Подсчёт прохода
-			// let way_x = 0;
-			// let way_y = 0;
-			
-			// let cell = level.GetCell( in_start_x | 0 , in_start_y | 0 )
-			// if ( cell ) this.visibleCells.push( cell );
-				// cell = level.GetCell( in_end_x | 0 , in_end_y | 0 )
-			// if ( cell ) this.visibleCells.push( cell );
-			
-			// way1_x += step1_x;
-			// way1_y += step1_y;
-			// way2_x += step2_x;
-			// way2_y += step2_y;
-		// }
-		// return;
-		
 		//Квадратная область вокруг камеры
        
 		const left   = CreateVector2F( this.position[ 0 ] + this.leftView[ 0 ] , this.position[ 2 ] + this.leftView[ 1 ] );
@@ -264,11 +204,7 @@ class Camera {
         const endX   = Math.max( left[ 0 ] , right[ 0 ] , this.position[ 0 ] );
         const startY = Math.min( left[ 1 ] , right[ 1 ] , this.position[ 2 ] );
         const endY   = Math.max( left[ 1 ] , right[ 1 ] , this.position[ 2 ] );
-		// const startX = Math.max( 0, this.position[ 0 ] - visDist );
-        // const endX   = Math.min( level.x , this.position[ 0 ] + visDist );
-        // const startY = Math.max( 0, this.position[ 2 ] - visDist );
-        // const endY   = Math.min( level.y , this.position[ 2 ] + visDist );
-		
+
 		 // Быстрая проверка клеток
         for ( let y = startY | 0; y < endY | 0; y++ ) {
 			if( y >= level.y || y < 0 ) continue;
@@ -297,40 +233,7 @@ class Camera {
 		this.visibleCells.forEach( ( cell ) => { 
 			cell.Update();  //В целях оптимизона, там всёравно только проекции, всё что связано с отображением
 			cell.Draw();
-		}
-		);
-		return;
-		let shadow = 0;
-		for( let w = 0; w < width; w++ ) {
-			shadow = 155;
-			const cr_a = ( camera.angle ) - fovHalf + w * fovStep; // rel_x * fovHalf;
-			const cos  = Math.cos( cr_a );
-			const sin  = Math.sin( cr_a );
-			for( let h = 0; h < heightH; h++ ) {
-				const y = h;
-				let buffI  = bufferYcache[ heightH + y ] + bufferXcache[ w ];
-
-				const dist    = ( ( ( h ) * heightStep ) ) * Math.cos( cr_a - camera.angle );
-				const cr_d    = ( cameraPosition[ 1 ] / dist ) * scale * floorCorrect;
-				const world_x = camera.position[ 0 ] + cos * cr_d;
-				const world_y = -camera.position[ 2 ] - sin * cr_d;
-				
-				const px = Math.abs( ( world_x - ( world_x | 0 ) ) * 63 ) | 0;
-				const py = Math.abs( ( world_y - ( world_y | 0 ) ) * 63 ) | 0;
-				
-				let pixelI = textureYCache[ py | 0 ] + bufferXcache[ px | 0 ];
-				
-				//if( zBuffer[ buffI ] > cr_d  ) {
-				if( !render.frameBuffer[ buffI ] ) {
-					render.frameBuffer[ buffI ]     = texture.data[ pixelI ] - shadow;
-					render.frameBuffer[ buffI + 1 ] = texture.data[ pixelI + 1 ] - shadow;
-					render.frameBuffer[ buffI + 2 ] = texture.data[ pixelI + 2 ] - shadow;
-					render.frameBuffer[ buffI + 3 ] = 255;
-					zBuffer[ buffI ] = dist;
-				}
-				shadow -= 1;
-			}
-		}
+		} );
 	}
 	DrawMap() {
 		let cellWidth = 10;

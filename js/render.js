@@ -123,7 +123,7 @@ class Render {
 	}
 	
 	//Упрощённый рендер, так как знаем что нижняя часть всегда парралельна верхней
-	RenderWallPolygonOpt( p1 , p2 , p3 , p4 , textureData , shadow = 0 , u = 1 , v = 1 ) {
+	RenderWallPolygonOpt( p1 , p2 , p3 , p4 , textureData , shadow = 0 , light = [ 0 , 0 , 0 ] ) {
 		if( ( p1[ 0 ] <= 0 && p2[ 0 ] <= 0 ) ||
 			( p1[ 0 ] >= width && p2[ 0 ] >= width ) ||
 			( p1[ 1 ] >= height && p2[ 1 ] >= height ) ||
@@ -195,11 +195,15 @@ class Render {
 			zBufferY[ secIndex ]      = yStart;
 			zBufferHeight[ secIndex ] = yStart + yHeight;
 			//Красим полоску по y
-			for( let y = offset_y; y <= yHeight + 1; y++ ) {
+			for( let y = offset_y; y <= yHeight + 1; y += rendStep ) {
 				let pixel_y = ( wayTop_y + y ) | 0;
 				let buffI   = bufferYcache[ pixel_y ] + bufferXcache[ pixel_x ];
+				let buffIs  = bufferYcache[ pixel_y + 1 ] + bufferXcache[ pixel_x ];
 				let buffI2  = bufferYcache[ pixel_y ] + bufferXcache[ secIndex ];
+				let buffI2s = bufferYcache[ pixel_y + 1 ] + bufferXcache[ secIndex ];
 				if( zBuffer[ buffI ] < z_way && zBuffer[ buffI2 ] < z_way ) {
+					u += u_step;
+					v += v_step;
 					u += u_step;
 					v += v_step;
 					continue;
@@ -208,19 +212,31 @@ class Render {
 				let py      = ( 63 * v ) | 0;
 				let pixelI  = textureYCache[ py ] + bufferXcache[ px ];
 				if( zBuffer[ buffI ] >= z_way ) {
-					this.frameBuffer[ buffI ]     = textureData[ pixelI ] - shadow;
-					this.frameBuffer[ buffI + 1 ] = textureData[ pixelI + 1 ] - shadow;
-					this.frameBuffer[ buffI + 2 ] = textureData[ pixelI + 2 ] - shadow;
+					this.frameBuffer[ buffI ]     = textureData[ pixelI ] - shadow + light[ 0 ];
+					this.frameBuffer[ buffI + 1 ] = textureData[ pixelI + 1 ] - shadow + light[ 1 ];
+					this.frameBuffer[ buffI + 2 ] = textureData[ pixelI + 2 ] - shadow + light[ 2 ];
 					this.frameBuffer[ buffI + 3 ] = 255;
 					zBuffer[ buffI ]  = z_way;
+					this.frameBuffer[ buffIs ]     = textureData[ pixelI ] - shadow + light[ 0 ];
+					this.frameBuffer[ buffIs + 1 ] = textureData[ pixelI + 1 ] - shadow + light[ 1 ];
+					this.frameBuffer[ buffIs + 2 ] = textureData[ pixelI + 2 ] - shadow + light[ 2 ];
+					this.frameBuffer[ buffIs + 3 ] = 255;
+					zBuffer[ buffIs ]  = z_way;
 				}
 				if( zBuffer[ buffI2 ] >= z_way ) {
-					this.frameBuffer[ buffI2 ]     = textureData[ pixelI ] - shadow;
-					this.frameBuffer[ buffI2 + 1 ] = textureData[ pixelI + 1 ] - shadow;
-					this.frameBuffer[ buffI2 + 2 ] = textureData[ pixelI + 2 ] - shadow;
+					this.frameBuffer[ buffI2 ]     = textureData[ pixelI ] - shadow + light[ 0 ];
+					this.frameBuffer[ buffI2 + 1 ] = textureData[ pixelI + 1 ] - shadow + light[ 1 ];
+					this.frameBuffer[ buffI2 + 2 ] = textureData[ pixelI + 2 ] - shadow + light[ 2 ];
 					this.frameBuffer[ buffI2 + 3 ] = 255;
 					zBuffer[ buffI2 ] = z_way;
+					this.frameBuffer[ buffI2s ]     = textureData[ pixelI ] - shadow + light[ 0 ];
+					this.frameBuffer[ buffI2s + 1 ] = textureData[ pixelI + 1 ] - shadow + light[ 1 ];
+					this.frameBuffer[ buffI2s + 2 ] = textureData[ pixelI + 2 ] - shadow + light[ 2 ];
+					this.frameBuffer[ buffI2s + 3 ] = 255;
+					zBuffer[ buffI2s ]  = z_way;
 				}
+				u += u_step;
+				v += v_step;
 				u += u_step;
 				v += v_step;
 			}
@@ -742,7 +758,7 @@ class Render {
 			z_w_b   += step_z_b;
 		}
 	}
-	RenderTriangleScanline( p1 , p2 , p3 , textureData , shadow = 0 ) {
+	RenderTriangleScanline( p1 , p2 , p3 , textureData , shadow = 0 , light = [ 0 , 0 , 0 ] ) {
 		if( ( p1[ 0 ] <= 0 && p2[ 0 ] <= 0 && p3[ 0 ] <= 0 ) ||
 			( p1[ 0 ] >= width && p2[ 0 ] >= width && p3[ 0 ] >= width ) ||
 			( p1[ 1 ] >= height && p2[ 1 ] >= height && p3[ 1 ] >= height ) ||
@@ -866,17 +882,17 @@ class Render {
 				let pixelI = textureYCache[ py | 0 ] + bufferXcache[ px | 0 ];
 				
 				if( zBuffer[ buffI ] > z ) {
-					this.frameBuffer[ buffI ]     = textureData[ pixelI ] - shadow;
-					this.frameBuffer[ buffI + 1 ] = textureData[ pixelI + 1 ] - shadow;
-					this.frameBuffer[ buffI + 2 ] = textureData[ pixelI + 2 ] - shadow;
+					this.frameBuffer[ buffI ]     = textureData[ pixelI ] - shadow + light[ 0 ];
+					this.frameBuffer[ buffI + 1 ] = textureData[ pixelI + 1 ] - shadow + light[ 1 ];
+					this.frameBuffer[ buffI + 2 ] = textureData[ pixelI + 2 ] - shadow + light[ 2 ];
 					this.frameBuffer[ buffI + 3 ] = 255;
 					zBuffer[ buffI ] = z;
 				}
 				
 				if( zBuffer[ buffI2 ] > z ) {
-					this.frameBuffer[ buffI2 ]     = textureData[ pixelI ] - shadow;
-					this.frameBuffer[ buffI2 + 1 ] = textureData[ pixelI + 1 ] - shadow;
-					this.frameBuffer[ buffI2 + 2 ] = textureData[ pixelI + 2 ] - shadow;
+					this.frameBuffer[ buffI2 ]     = textureData[ pixelI ] - shadow + light[ 0 ];
+					this.frameBuffer[ buffI2 + 1 ] = textureData[ pixelI + 1 ] - shadow + light[ 1 ];
+					this.frameBuffer[ buffI2 + 2 ] = textureData[ pixelI + 2 ] - shadow + light[ 2 ];
 					this.frameBuffer[ buffI2 + 3 ] = 255;
 					zBuffer[ buffI2 ] = z;
 				}
@@ -958,17 +974,17 @@ class Render {
 				let pixelI = textureYCache[ py | 0 ] + bufferXcache[ px | 0 ];
 				
 				if( zBuffer[ buffI ] > z ) {
-					this.frameBuffer[ buffI ]     = textureData[ pixelI ] - shadow;
-					this.frameBuffer[ buffI + 1 ] = textureData[ pixelI + 1 ]  - shadow;
-					this.frameBuffer[ buffI + 2 ] = textureData[ pixelI + 2 ] - shadow;
+					this.frameBuffer[ buffI ]     = textureData[ pixelI ] - shadow + light[ 0 ];
+					this.frameBuffer[ buffI + 1 ] = textureData[ pixelI + 1 ]  - shadow + light[ 1 ];
+					this.frameBuffer[ buffI + 2 ] = textureData[ pixelI + 2 ] - shadow + light[ 2 ];
 					this.frameBuffer[ buffI + 3 ] = 255;
 					zBuffer[ buffI ] = z;
 				}
 				
 				if( zBuffer[ buffI2 ] > z ) {
-					this.frameBuffer[ buffI2 ]     = textureData[ pixelI ] - shadow;
-					this.frameBuffer[ buffI2 + 1 ] = textureData[ pixelI + 1 ] - shadow;
-					this.frameBuffer[ buffI2 + 2 ] = textureData[ pixelI + 2 ] - shadow;
+					this.frameBuffer[ buffI2 ]     = textureData[ pixelI ] - shadow + light[ 0 ];
+					this.frameBuffer[ buffI2 + 1 ] = textureData[ pixelI + 1 ] - shadow + light[ 1 ];
+					this.frameBuffer[ buffI2 + 2 ] = textureData[ pixelI + 2 ] - shadow + light[ 2 ];
 					this.frameBuffer[ buffI2 + 3 ] = 255;
 					zBuffer[ buffI2 ] = z;
 				}

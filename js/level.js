@@ -1,6 +1,7 @@
 class Cell {
 	key;
 	position;
+	normal;
 	center;
 	centerTop;
 	centerBottom;
@@ -16,9 +17,14 @@ class Cell {
 	shadow;
 	drawed = false;
 	distance = 0;
+	light;
+	light_dot = 0;
+	light_color;
 	constructor( x = 0 , y = 0 , key = 0 ) {
+		this.light_color   = ColorRGB( 0 , 0 , 0 );
 		this.key           = key;
 		this.position      = CreateVector2I( x , y );
+		this.normal        = CreateVector3F( 0 , 1 , 0 );
 		this.center        = CreateVector3F( x + 0.5 , 0 , y + 0.5 );
 		this.centerTop     = CreateVector3F( x + 0.5 , 0 , y );
 		this.centerBottom  = CreateVector3F( x + 0.5 , 0 , y + 1 );
@@ -49,7 +55,20 @@ class Cell {
 		this.porjectPoints[ 8 ] = render.ProjectPoint( this.centerRight , cameraPosition , 1 );
 		
 	}
-	
+	SetLight( light ) {
+		this.light       = light;
+		this.CalcLight();
+	}
+	CalcLight() {
+		const light      = this.light;
+		const front      = VectorNormalize3F( SubtractVectorsF( light.position , this.center ) );
+		const dist       = 1 / DistanceVectorsF( light.position , this.center );
+		this.light_dot   = DotVectors( front , this.normal );
+		this.light_color = MultiplyColorRGB( light.color , this.light_dot * dist > 0 ? this.light_dot : 0 );
+		for( let w = 0; w < this.wallsCount; w++ ) {
+			level.walls[ this.walls[ w ] ].SetLight( light.position , light.color );
+		}
+	}
 	Draw() {
 		if( this.drawed ) return;
 		this.drawed = true;
@@ -70,24 +89,16 @@ class Cell {
 		let right  = CreatePointUVZ( drawCRight[ 3 ][ 0 ]  , drawCRight[ 3 ][ 1 ] , 1 , 0.5 , drawCRight[ 3 ][ 2 ] );
 		let top    = CreatePointUVZ( drawCTop[ 2 ][ 0 ]    , drawCTop[ 2 ][ 1 ] , 0.5 , 0 , drawCTop[ 2 ][ 2 ] );
 		let bottom = CreatePointUVZ( drawCBottom[ 3 ][ 0 ] , drawCBottom[ 3 ][ 1 ] , 0.5 , 1 , drawCBottom[ 3 ][ 2 ] );
-		// render.RenderTriangleScanline( point1 , point2 , point3 , this.texture.data , shadow );
-		// render.RenderTriangleScanline( point4 , point3 , point2 , this.texture.data , shadow );
-		//if( drawPoints1[ 2 ][ 0 ] < 0 || drawPoints1[ 2 ][ 0 ] > width ) return;
-		//if( drawPoints1[ 3 ][ 0 ] < 0 || drawPoints1[ 3 ][ 0 ] > width ) return;
-		//if( drawPoints2[ 2 ][ 0 ] < 0 || drawPoints2[ 2 ][ 0 ] > width ) return;
-		//if( drawPoints2[ 3 ][ 0 ] < 0 || drawPoints2[ 3 ][ 0 ] > width ) return;
-		//render.RenderTexturedFloorDoomOpt( point1 , point2 , point3 , point4 , this.texture.data , this.shadow );
-		render.RenderTriangleScanline( point1 , top    , center , this.texture.data , shadow );
-		render.RenderTriangleScanline( point1 , left   , center , this.texture.data , shadow );
-		render.RenderTriangleScanline( point2 , top    , center , this.texture.data , shadow );
-		render.RenderTriangleScanline( point2 , right  , center , this.texture.data , shadow );
-		render.RenderTriangleScanline( point3 , bottom , center , this.texture.data , shadow );
-		render.RenderTriangleScanline( point3 , left   , center , this.texture.data , shadow );
-		render.RenderTriangleScanline( point4 , bottom , center , this.texture.data , shadow );
-		render.RenderTriangleScanline( point4 , right  , center , this.texture.data , shadow );
-		// render.RenderTriangleScanline( center , point2 , point4 , this.texture.data );
-		// render.RenderTriangleScanline( point3 , point4 , center , this.texture.data );
-		// render.RenderTriangleScanline( center , point3 , point1 , this.texture.data );
+
+		render.RenderTriangleScanline( point1 , top    , center , this.texture.data , shadow , this.light_color );
+		render.RenderTriangleScanline( point1 , left   , center , this.texture.data , shadow , this.light_color );
+		render.RenderTriangleScanline( point2 , top    , center , this.texture.data , shadow , this.light_color );
+		render.RenderTriangleScanline( point2 , right  , center , this.texture.data , shadow , this.light_color );
+		render.RenderTriangleScanline( point3 , bottom , center , this.texture.data , shadow , this.light_color );
+		render.RenderTriangleScanline( point3 , left   , center , this.texture.data , shadow , this.light_color );
+		render.RenderTriangleScanline( point4 , bottom , center , this.texture.data , shadow , this.light_color );
+		render.RenderTriangleScanline( point4 , right  , center , this.texture.data , shadow , this.light_color );
+		
 		if( this.wallsCount <= 0 ) return;
 		this.walls.sort( ( a , b ) => {
 			
@@ -99,9 +110,30 @@ class Cell {
 			level.walls[ this.walls[ w ] ].distance = this.distance;
 			level.walls[ this.walls[ w ] ].Draw();
 		}
-		//render.RenderTriangleScanline( point1 , point2 , point3 , texture.data );
-		//render.RenderTriangleScanline( point3 , point4 , point2 , texture.data );
-		
+	}
+}
+function ColorRGB( r = 255 , g = 255 , b = 255 ) {
+	const color = new Uint8Array( 3 );
+		  color[ 0 ] = r;
+		  color[ 1 ] = g;
+		  color[ 2 ] = b;
+	return color;
+}
+function MultiplyColorRGB( rgb , mult ) {
+	const color = new Uint8Array( 3 );
+		  color[ 0 ] = rgb[ 0 ] * mult;
+		  color[ 1 ] = rgb[ 1 ] * mult;
+		  color[ 2 ] = rgb[ 2 ] * mult;
+	return color;
+}
+class Light {
+	color;
+	position;
+	radius;
+	constructor( position = [ 0 , 0 , 0 ] , color = [ 0 , 0 , 0 ] , radius = 1 ) {
+		this.position = position;
+		this.color    = color;
+		this.radius   = radius;
 	}
 }
 class Level {
@@ -110,6 +142,7 @@ class Level {
 	walls;
 	wallsCount;
 	cells;
+	lights;
 	constructor( x = 0 , y = 0 ) {
 		this.x     = x | 0;
 		this.y     = y | 0;
@@ -121,6 +154,19 @@ class Level {
 				let key           = this.GetCellKey( x , y );
 				this.cells[ key ] = new Cell( x , y , key );
 				this.cells[ key ].texture = texture;
+			}
+		}
+	}
+	AddLight( light ) {
+		for( let x = -light.radius; x <= light.radius; x++ ) {
+			for( let y = -light.radius; y <= light.radius; y++ ) {
+				const cx = ( light.position[ 0 ] + x ) | 0;
+				const cy = ( light.position[ 2 ] + y ) | 0;
+				if( cx >= this.x || cx < 0 || cy >= this.y || cy < 0 ) continue;
+				let cell = this.GetCell( cx , cy );
+				if( cell ) {
+					cell.SetLight( light );
+				} 
 			}
 		}
 	}

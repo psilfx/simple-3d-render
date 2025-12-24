@@ -131,9 +131,15 @@
 				  level.AddWall( CreateVector3F( 5 , 0 , 8 ) , CreateVector3F( 6 , 0 , 8 ) , 0.5 , 1 , cube );
 				  level.AddWall( CreateVector3F( 6 , 0 , 8 ) , CreateVector3F( 7 , 0 , 8 ) , 0.5 , 1 , cube );
 				  level.AddWall( CreateVector3F( 7 , 0 , 8 ) , CreateVector3F( 8 , 0 , 8 ) , 0.5 , 1 , cube );
+				  level.AddWall( CreateVector3F( 4 , 0 , 8 ) , CreateVector3F( 5 , 0 , 9 ) , 0.15 , 0.4 , cube );
+				  level.AddWall( CreateVector3F( 5 , 0 , 9 ) , CreateVector3F( 6 , 0 , 9 ) , 0.15 , 0.4 , cube );
+				  level.AddWall( CreateVector3F( 6 , 0 , 9 ) , CreateVector3F( 6.5 , 0 , 9.5 ) , 0.15 , 0.4 , cube );
 				let wall =  level.AddWall( CreateVector3F( 8 , 0 , 8 ) , CreateVector3F( 9 , 0 , 8 ) , 0.1 , 1 , cube );
 					wall.Rotate( 0.785398 );
 				  level.SetCellTexture( 3 , 3 , texture1 );
+				let lightColor = new Light( CreateVector3F( 8 , 3 , 7 ) , ColorRGB( 100 , 100 , 100 ) , 10 );
+				  level.AddLight( lightColor );
+				  level.AddWall( CreateVector3F( 8 , 3 , 7 ) , CreateVector3F( 8.1 , 3 , 7.1 ) , 0.1 , 0.1 , texture2 );
 			
 			const circleAngle360 = 2 * Math.PI;
 			const PI             = Math.PI;
