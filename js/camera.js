@@ -214,19 +214,28 @@ class Camera {
 				if ( !this.PointInTiangle( x , y , left , right ) ) continue;
 				const cell = level.GetCell( x , y );
 				if ( cell ) {
-					
-					cell.distance = Math.max( Math.abs( this.position[ 0 ] - x ) , Math.abs( this.position[ 2 ] - y ) );
+					cell.distance = Math.abs( this.position[ 0 ] - x ) + Math.abs( this.position[ 2 ] - y );
 					this.visibleCells.push( cell );
 				} 
             }
         }
 	}
 	Update() {
-		
-		//this.GetVisibleCells();
+		const cell1 = level.GetCell( this.position[ 0 ] - 0.1 , this.position[ 2 ] - 0.1 );
+		const cell2 = level.GetCell( this.position[ 0 ] + 0.1 , this.position[ 2 ] - 0.1 );
+		const cell3 = level.GetCell( this.position[ 0 ] - 0.1 , this.position[ 2 ] + 0.1 );
+		const cell4 = level.GetCell( this.position[ 0 ] + 0.1 , this.position[ 2 ] + 0.1 );
+		const box   = { x: this.position[ 0 ] , y: this.position[ 2 ] , width: 0.2 , height: 0.2 };
+		//console.log( box );
+		if( collisions.CheckCellCollision( box , cell1 ) || collisions.CheckCellCollision( box , cell2 ) || collisions.CheckCellCollision( box , cell3 ) || collisions.CheckCellCollision( box , cell4 ) ) {
+			console.log( 'collision' );
+		}
+		// Приводим угол к диапазону [-PI, PI]
+		while ( camera.angle > PI )  camera.angle -= circleAngle360;
+		while ( camera.angle < -PI ) camera.angle += circleAngle360;
 		this.GetVisibleCellsRayBased();
+		// Сортируем по удалению
 		this.visibleCells.sort( ( a , b ) => a.distance - b.distance );
-		//this.visibleCells.forEach( ( cell ) => { cell.Update() } );
 	}
 	Draw() {
 		

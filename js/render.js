@@ -764,16 +764,11 @@ class Render {
 			( p1[ 1 ] >= height && p2[ 1 ] >= height && p3[ 1 ] >= height ) ||
 			( p1[ 0 ] <= widthMin || p2[ 0 ] <= widthMin || p3[ 0 ] <= widthMin ) ||
 			( p1[ 0 ] >= widthMax || p2[ 0 ] >= widthMax || p3[ 0 ] >= widthMax ) 
-			// ( p1[ 1 ] >= zBufferY[ p1[ 0 ] ] && p1[ 1 ] <= zBufferHeight[ p1[ 0 ] ] &&
-			  // p2[ 1 ] >= zBufferY[ p2[ 0 ] ] && p2[ 1 ] <= zBufferHeight[ p2[ 0 ] ] &&
-			  // p3[ 1 ] >= zBufferY[ p3[ 0 ] ] && p3[ 1 ] <= zBufferHeight[ p3[ 0 ] ]	)
 			) return;
 		const points = [ p1 , p2 , p3 ];
 			  points.sort( ( a , b ) => a[ 1 ] - b[ 1 ] );
 		
 		const [ top , middle , bottom ] = points;
-		
-		//if( top[ 1 ] < heightH ) return;
 		
 		// Вычисляем обратные наклоны (dx/dy)
 		const diff1_y = ( middle[ 1 ] - top[ 1 ] )    | 0;
@@ -825,8 +820,6 @@ class Render {
 		let z1_way  = top[ 4 ];
 		let z2_way  = top[ 4 ];
 		
-		
-
 		// Верхняя часть треугольника (от top до middle)
 		for ( let y = top[ 1 ] | 0; y < middle[ 1 ] | 0; y++ ) {
 			const startX   = Math.min( way1_x , way2_x );
@@ -864,17 +857,6 @@ class Render {
 					z_way += z_step;
 					continue;
 				}
-				// const cr_a = camera.angle - fovHalf + x * fovStep; // rel_x * fovHalf;
-				// const cos  = Math.cos( cr_a );
-				// const sin  = Math.sin( cr_a );
-
-				
-				// const cr_d    = ( cameraPosition[ 1 ] / ( ( y - heightH ) * heightStep * Math.cos( cr_a - camera.angle )  ) ) * scale * floorCorrect;
-				// const world_x = camera.position[ 0 ] + cos * cr_d;
-				// const world_y = camera.position[ 2 ] + sin * cr_d;
-				
-				// const px = Math.abs( ( world_x - ( world_x | 0 ) ) * 63 ) | 0;
-				// const py = Math.abs( ( world_y - ( world_y | 0 ) ) * 63 ) | 0;
 				//Индексы буфера кадра и текстуры
 				const px = ( uvw_x * 63 ) | 0;
 				const py = ( uvw_y * 63 ) | 0;
@@ -955,18 +937,6 @@ class Render {
 					z_way += z_step;
 					continue;
 				}
-				
-				// const cr_a = camera.angle - fovHalf + x * fovStep; // rel_x * fovHalf;
-				// const cos  = Math.cos( cr_a );
-				// const sin  = Math.sin( cr_a );
-
-				
-				// const cr_d    = ( cameraPosition[ 1 ] / ( ( y - heightH ) * heightStep * Math.cos( cr_a - camera.angle )  ) ) * scale * floorCorrect;
-				// const world_x = camera.position[ 0 ] + cos * cr_d;
-				// const world_y = camera.position[ 2 ] + sin * cr_d;
-				
-				// const px = Math.abs( ( world_x - ( world_x | 0 ) ) * 63 ) | 0;
-				// const py = Math.abs( ( world_y - ( world_y | 0 ) ) * 63 ) | 0;
 				//Индексы буфера кадра и текстуры
 				const px = ( uvw_x * 63 ) | 0;
 				const py = ( uvw_y * 63 ) | 0;

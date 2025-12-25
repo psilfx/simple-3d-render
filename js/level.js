@@ -69,6 +69,7 @@ class Cell {
 			level.walls[ this.walls[ w ] ].SetLight( light.position , light.color );
 		}
 	}
+	
 	Draw() {
 		if( this.drawed ) return;
 		this.drawed = true;
