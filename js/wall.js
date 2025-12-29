@@ -226,7 +226,6 @@ class Wall {
 			render.RenderWallPolygonOpt( point5 , point2 , point6 , point4 , this.texture.data , shadow , this.visibleLights[ 1 ] );
 		} 
 		if( this.visibleSides[ 3 ] > 0 ) {
-			 render.RenderWallPolygonOpt( drawPoints1[ 1 ] , drawPoints3[ 1 ] , drawPoints1[ 3 ] , drawPoints3[ 3 ] , this.texture.data , shadow , this.uvPoints[ 1 ][ 0 ] , this.uvPoints[ 1 ][ 1 ] );
 			let point1 = CreatePointUVZ( drawPoints1[ 1 ][ 0 ] , drawPoints1[ 1 ][ 1 ] , 0                       , 0 , drawPoints1[ 1 ][ 2 ] );
 			let point2 = CreatePointUVZ( drawPoints3[ 1 ][ 0 ] , drawPoints3[ 1 ][ 1 ] , this.width , 0 , drawPoints3[ 1 ][ 2 ] );
 			let point3 = CreatePointUVZ( drawPoints1[ 3 ][ 0 ] , drawPoints1[ 3 ][ 1 ] , 0                       , this.height , drawPoints1[ 3 ][ 2 ] );

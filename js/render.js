@@ -75,7 +75,7 @@ class Render {
 		rotated[ 2 ] = -camCoords[ 0 ] * camNormal[ 2 ] + camCoords[ 2 ] * camNormal[ 0 ]; //z
 		let distance = Math.abs( rotated[ 2 ] );
 		// Проецируем точку
-		projected[ 0 ] = ( widthH - ( rotated[ 0 ] / distance ) * scale ) | 0;
+		projected[ 0 ] = Math.round( widthH - ( rotated[ 0 ] / distance ) * scale ) | 0;
 		projected[ 1 ] = point[ 1 ];
 		projected[ 5 ] = Math.max( near , distance ); //Для zBuffer
 		projected[ 2 ] = Math.min( wallHCut , ( scale * ( 1 / projected[ 5 ] ) ) ) | 0; //Полный размер проекции
@@ -85,17 +85,11 @@ class Render {
 	}
 	
 	GetWallDrawPoints( p1 , p2 ) {
-		// const points = [ p1 , p2 ];
-			  // points.sort( ( a , b ) => a[ 0 ] - b[ 0 ] );
-				// [ p1 , p2 ] = points;
-		
-		// const cameraoffset1 = ( ( cameraPosition[ 1 ] / p1[ 5 ] ) * scale ) | 0;
-		// const cameraoffset2 = ( ( cameraPosition[ 1 ] / p2[ 5 ] ) * scale ) | 0;
 		const camY = cameraPosition[ 1 ] + camAnim.GetOffsetY();
 		const camX = camAnim.GetOffsetX();
 		let topLeft     = CreateVector3F( p1[ 0 ] + camX , heightH + 0 - ( p1[ 3 ] ) - ( ( p1[ 1 ] - camY ) * p1[ 2 ] ) | 0 , p1[ 4 ] );
 		let topRight    = CreateVector3F( p2[ 0 ] + camX , heightH + 0 - ( p2[ 3 ] ) - ( ( p2[ 1 ] - camY ) * p2[ 2 ] ) | 0 , p2[ 4 ] );
-		let bottomLeft  = CreateVector3F( topLeft[ 0 ]  , topLeft[ 1 ]  + p1[ 3 ] , p1[ 4 ] );
+		let bottomLeft  = CreateVector3F( topLeft[ 0 ] , topLeft[ 1 ]  + p1[ 3 ] , p1[ 4 ] );
 		let bottomRight = CreateVector3F( topRight[ 0 ] , topRight[ 1 ] + p2[ 3 ] , p2[ 4 ] );
 		return [ topLeft , topRight , bottomLeft , bottomRight ];
 	}
@@ -131,9 +125,9 @@ class Render {
 			( p1[ 0 ] >= widthMax || p2[ 0 ] >= widthMax ) ) return;
 		const rendStep  = 2;
 		//Считаем разницу по x, чтобы отрисовать полоску по x
-		const xStart   = ( p1[ 0 ] ) | 0;
+		const xStart   = p1[ 0 ];
 		let offset_x   = 0;
-		let xDiff      = ( p2[ 0 ] - p1[ 0 ] ) | 0;
+		let xDiff      = p2[ 0 ] - p1[ 0 ];
 		let xDir       = ( xDiff >= 0 ) ? 1 : -1; //Запоминаем направление
 			xDiff      = Math.max( 1 , Math.abs( xDiff ) );
 		//Кэш для избежания деления
@@ -160,27 +154,25 @@ class Render {
 		let vb_way = p3[ 3 ];
 		let z_way  = p1[ 4 ];
 		//Стартуем цикл по оси x
-		//console.log( xStart , zBufferY[ xStart ] , zBufferHeight[ xStart ] );
 		for( let x = 0; x <= xDiff; x += rendStep ) {
-			let pixel_x              = xStart + x * xDir;
-			const offset_y           = ( wayTop_y < 0 ) ? Math.abs( wayTop_y ) : 0;
-			const offset_yb          = ( wayBot_y >= height ) ? ( wayBot_y - height ) | 0 : 0;
-			let yDiff                = ( wayBot_y - wayTop_y ) | 0;
-			const yStart             = ( wayTop_y + offset_y ) | 0;
-			const yHeight            = yDiff - offset_yb;
-			const secIndex           = Math.min( width - 1 , Math.max( 0 , pixel_x + 1 * xDir ) );
+			const pixel_x   = xStart + x * xDir;
+			const offset_y  = ( wayTop_y < 0 ) ? Math.abs( wayTop_y | 0 ) : 0;
+			const offset_yb = ( wayBot_y >= height ) ? ( wayBot_y - height ) | 0 : 0;
+			const yDiff     = ( wayBot_y - wayTop_y ) | 0;
+			const yStart    = ( wayTop_y + offset_y ) | 0;
+			const yHeight   = yDiff - offset_yb;
+			const secIndex  = Math.min( width - 1 , Math.max( 0 , pixel_x + 1 * xDir ) );
 			if( ( pixel_x >= width || pixel_x < 0 ) || 
-				( yStart > zBufferY[ pixel_x ]  && yStart + yDiff < zBufferHeight[ pixel_x ] ) || 
+				( yStart > zBufferY[ pixel_x ]  && yStart + yDiff < zBufferHeight[ pixel_x ] ) && 
 				( yStart > zBufferY[ secIndex ] && yStart + yDiff < zBufferHeight[ secIndex ] )
 			) {
 				wayTop_y += topStep_y;
 				wayBot_y += botStep_y;
-				//uv_way_x += uv_step_x - 1 * ( uv_way_x >= 1 );
-				ut_way += ut_step;
-				vt_way += vt_step;
-				ub_way += ub_step;
-				vb_way += vb_step;
-				z_way  += zStep;
+				ut_way   += ut_step;
+				vt_way   += vt_step;
+				ub_way   += ub_step;
+				vb_way   += vb_step;
+				z_way    += zStep;
 				if( xDir == 1  && pixel_x >= width ) break;
 				if( xDir == -1 && pixel_x < 0 ) break;
 				continue;
@@ -194,6 +186,7 @@ class Render {
 			zBufferHeight[ pixel_x ]  = yStart + yHeight;
 			zBufferY[ secIndex ]      = yStart;
 			zBufferHeight[ secIndex ] = yStart + yHeight;
+			
 			//Красим полоску по y
 			for( let y = offset_y; y <= yHeight + 1; y += rendStep ) {
 				let pixel_y = ( wayTop_y + y ) | 0;
@@ -263,6 +256,38 @@ class Render {
 	}
 	DrawBuffer() {
 		context.putImageData( this.imageData , 0 , 0 );
+	}
+	DrawSkybox() {
+		const camPosX     = ( dist_inv_pi * camera.angle * 512 ) | 0;
+		const ysssss      = skybox.stride;
+		const textureData = skybox.data;
+		for( let x = 0; x < width; x += 2 ) {
+			const xc = skyBoxCacheByte[ ( skyBoxCacheX[ x ] + camPosX ) ];
+			for( let y = 0; y < height; y += 2 ) {
+				const buffI   = bufferYcache[ y ] + bufferXcache[ x ];
+				const buffIn  = bufferYcache[ y ] + bufferXcache[ x + 1 ];
+				const buffI2  = bufferYcache[ y + 1 ] + bufferXcache[ x ];
+				const buffI2n = bufferYcache[ y + 1 ] + bufferXcache[ x + 1 ];
+				const yc      = skyBoxCacheY[ y ];
+				const pixelI  = yc + xc;
+				this.frameBuffer[ buffI ]       = textureData[ pixelI ];
+				this.frameBuffer[ buffI + 1 ]   = textureData[ pixelI + 1 ];
+				this.frameBuffer[ buffI + 2 ]   = textureData[ pixelI + 2 ];
+				this.frameBuffer[ buffI + 3 ]   = 255;
+				this.frameBuffer[ buffIn ]      = textureData[ pixelI ];
+				this.frameBuffer[ buffIn + 1 ]  = textureData[ pixelI + 1 ];
+				this.frameBuffer[ buffIn + 2 ]  = textureData[ pixelI + 2 ];
+				this.frameBuffer[ buffIn + 3 ]  = 255;
+				this.frameBuffer[ buffI2 ]      = textureData[ pixelI ];
+				this.frameBuffer[ buffI2 + 1 ]  = textureData[ pixelI + 1 ];
+				this.frameBuffer[ buffI2 + 2 ]  = textureData[ pixelI + 2 ];
+				this.frameBuffer[ buffI2 + 3 ]  = 255;
+				this.frameBuffer[ buffI2n ]     = textureData[ pixelI ];
+				this.frameBuffer[ buffI2n + 1 ] = textureData[ pixelI + 1 ];
+				this.frameBuffer[ buffI2n + 2 ] = textureData[ pixelI + 2 ];
+				this.frameBuffer[ buffI2n + 3 ] = 255;
+			}
+		}
 	}
 	// RenderTexturedFloorDoomOpt( p1 , p2 , p3 , p4 , textureData , shadow = 0 ) { //v1 , v2 - линия текстурирования от, v3 , v4 - линия текстурирования до
 		// if( ( p1[ 0 ] <= 0 && p2[ 0 ] <= 0 && p3[ 0 ] <= 0 && p4[ 0 ] <= 0 ) ||
@@ -975,6 +1000,5 @@ class Render {
 			z1_way    += z3_step;
 			z2_way    += z2_step;
 		}
-		
 	}
 }

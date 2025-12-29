@@ -25,7 +25,8 @@ class Collisions {
 		for( let w = 0; w < cell.wallsCount; w++ ) {
 			const wall = level.walls[ cell.walls[ w ] ];
 			//console.log( { x: wall.center[ 0 ] - 0.5 , y: wall.center[ 2 ] - 0.5 , width: 1 , height: 1 } );
-			if( this.AABB( box , { x: wall.center[ 0 ] - 0.5 , y: wall.center[ 2 ] - 0.5 , width: 1 , height: 1 } ) ) {
+			const wall_box = { x: wall.center[ 0 ] - 0.5 , y: wall.center[ 2 ] - 0.5 , width: 1 , height: 1 };
+			if( this.AABB( box , wall_box ) || this.AABB( wall_box , box ) ) {
 				return wall;
 			}
 		}
@@ -34,9 +35,10 @@ class Collisions {
 	
 	// Проверка AABB коллизии
 	AABB( rect1, rect2 ) {
-		return rect1.x < rect2.x + rect2.width &&
-			   rect1.x + rect1.width > rect2.x &&
-			   rect1.y < rect2.y + rect2.height &&
-			   rect1.y + rect1.height > rect2.y;
+		
+		const x_coll = ( ( rect1.x >= rect2.x && rect1.x <= rect2.x + rect2.width ) || ( rect1.x + rect1.width >= rect2.x && rect1.x + rect1.width <= rect2.x + rect2.width ) );
+		const y_coll = ( ( rect1.y >= rect2.y && rect1.y <= rect2.y + rect2.height ) || ( rect1.y + rect1.height >= rect2.y && rect1.y + rect1.height <= rect2.y + rect2.height ) );
+		//console.log( x_coll , y_coll , ( x_coll && y_coll ) );
+		return ( x_coll && y_coll );
 	}
 }

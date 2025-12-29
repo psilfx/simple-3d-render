@@ -221,24 +221,34 @@ class Camera {
         }
 	}
 	Update() {
-		const cell1 = level.GetCell( this.position[ 0 ] - 0.1 , this.position[ 2 ] - 0.1 );
-		const cell2 = level.GetCell( this.position[ 0 ] + 0.1 , this.position[ 2 ] - 0.1 );
-		const cell3 = level.GetCell( this.position[ 0 ] - 0.1 , this.position[ 2 ] + 0.1 );
-		const cell4 = level.GetCell( this.position[ 0 ] + 0.1 , this.position[ 2 ] + 0.1 );
-		const box   = { x: this.position[ 0 ] , y: this.position[ 2 ] , width: 0.2 , height: 0.2 };
+		const posX  = this.position[ 0 ] | 0;
+		const posY  = this.position[ 2 ] | 0;
+		const cells = [ level.GetCell( posX , posY ) , level.GetCell( posX - 1 , posY ) , level.GetCell( posX + 1 , posY ) , level.GetCell( posX , posY - 1 ) , level.GetCell( posX , posY + 1 ) ];
+		
+		const box   = { x: this.position[ 0 ] - 0.25 , y: this.position[ 2 ] - 0.25 , width: 0.5 , height: 0.5 };
 		//console.log( box );
-		if( collisions.CheckCellCollision( box , cell1 ) || collisions.CheckCellCollision( box , cell2 ) || collisions.CheckCellCollision( box , cell3 ) || collisions.CheckCellCollision( box , cell4 ) ) {
-			console.log( 'collision' );
+		for( let c = 0; c < 5; c++ ) {
+			const cell = cells[ c ];
+			if( !cells[ c ] ) continue;
+			let wall;
+			if( wall = collisions.CheckCellCollision( box , cell ) ) {
+				let overlapX = Math.min( box.x + box.width  - wall.points[ 0 ][ 0 ] , wall.points[ 0 ][ 0 ] + wall.wallLength - box.x );
+				let overlapY = Math.min( box.y + box.height - wall.points[ 0 ][ 2 ] , wall.points[ 0 ][ 2 ] + wall.width - box.y );
+				break;
+			}
 		}
 		// Приводим угол к диапазону [-PI, PI]
 		while ( camera.angle > PI )  camera.angle -= circleAngle360;
 		while ( camera.angle < -PI ) camera.angle += circleAngle360;
+		// Приводим позицию камеры к уровню
+		this.position[ 0 ] = Math.min( level.x , Math.max( 0 , this.position[ 0 ] ) );
+		this.position[ 2 ] = Math.min( level.y , Math.max( 0 , this.position[ 2 ] ) );
 		this.GetVisibleCellsRayBased();
 		// Сортируем по удалению
 		this.visibleCells.sort( ( a , b ) => a.distance - b.distance );
 	}
 	Draw() {
-		
+		render.DrawSkybox();
 		this.visibleCells.forEach( ( cell ) => { 
 			cell.Update();  //В целях оптимизона, там всёравно только проекции, всё что связано с отображением
 			cell.Draw();
@@ -260,9 +270,22 @@ class Camera {
 			let c_y  = cell.position[ 1 ] * cellWidth;
 			context.fillStyle = "orange";
 			context.fillRect( c_x , c_y , cellWidth , cellWidth );
+			context.strokeStyle = "purple";
+			for( let w = 0; w < cell.wallsCount; w++ ) {
+				const wall = level.walls[ cell.walls[ w ] ];
+				const points = wall.transformedPoints;
+				
+				context.beginPath();
+				context.moveTo( points[ 0 ][ 0 ] * cellWidth , points[ 0 ][ 2 ] * cellWidth );
+				context.lineTo( points[ 1 ][ 0 ] * cellWidth , points[ 1 ][ 2 ] * cellWidth );
+				context.lineTo( points[ 3 ][ 0 ] * cellWidth , points[ 3 ][ 2 ] * cellWidth );
+				context.lineTo( points[ 2 ][ 0 ] * cellWidth , points[ 2 ][ 2 ] * cellWidth );
+				context.lineTo( points[ 0 ][ 0 ] * cellWidth , points[ 0 ][ 2 ] * cellWidth );
+				context.stroke();
+			}
 		}
 		context.fillStyle = "red";
-		context.fillRect( this.position[ 0 ] * cellWidth , this.position[ 2 ] * cellWidth , cellWidth , cellWidth );
+		context.fillRect( ( this.position[ 0 ] - 0.25 ) * cellWidth , ( this.position[ 2 ] - 0.25 ) * cellWidth , cellWidth * 0.5 , cellWidth * 0.5 );
 		
 		const p2   = CreateVector2F( ( this.position[ 0 ] + visDist * Math.cos( this.angle - fovHalf ) ) * cellWidth , ( this.position[ 2 ] + visDist * Math.sin( this.angle - fovHalf ) ) * cellWidth );
 		const p4   = CreateVector2F( ( this.position[ 0 ] + visDist * Math.cos( this.angle + fovHalf ) ) * cellWidth , ( this.position[ 2 ] + visDist * Math.sin( this.angle + fovHalf ) ) * cellWidth );

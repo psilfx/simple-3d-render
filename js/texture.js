@@ -14,6 +14,10 @@ class Texture {
 			img.onload = () => {
 				this.loaded = true;
 				//Канвас для загрузки текстуры
+				this.width         = img.width;
+				this.height        = img.height;
+				this.stride        = this.width * 4;
+				this.data          = new Uint8Array( this.width * this.height * 4 );
 				let tcontext       = tcanvas.getContext( '2d' , { willReadFrequently: true }  );
 					tcanvas.width  = this.width;
 					tcanvas.height = this.height;

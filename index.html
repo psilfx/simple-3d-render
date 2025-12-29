@@ -49,6 +49,23 @@
 			const widthMin = -width * 2;
 			const widthMax = width * 3;
 			
+			const dist_inv_width  = 1 / width;
+			const dist_inv_height = 1 / height;
+			const dist_inv_pi     = 1 / Math.PI;
+			
+			const skyBoxCacheX    = new Uint16Array( width );
+			const skyBoxCacheY    = new Uint32Array( height );
+			const skyBoxCacheByte = new Uint32Array( width * 4 );
+			for( let x = 0; x < width; x++ ) {
+				skyBoxCacheX[ x ] = ( x * dist_inv_width * 256 + 512 ) | 0;
+			}
+			for( let x = 0; x < width * 4; x++ ) {
+				skyBoxCacheByte[ x ] = x * 4;
+			}
+			for( let y = 0; y < height; y++ ) {
+				skyBoxCacheY[ y ] = 4096 * ( ( y * dist_inv_height * 256 ) | 0 );
+				//console.log( skyBoxCacheY[ y ] );
+			}
 			
 		//	let cameraPosition = CreateVector3F( 0 , 0.5 , 0 );
 			let cameraPosition = CreateVector3F( -0.89501953125 , 0.5 , 5.3515625 );
@@ -61,7 +78,7 @@
 			const rotSpeed   = 0.025;
 			const visDist    = 10;
 			const heightStep = visDist / heightH;
-			const render     = new Render();	
+			const render     = new Render();
 			
 			const texture = new Texture( 'img/grass.jpg' );
 				  texture.Load();
@@ -74,6 +91,9 @@
 				  
 			const texture2 = new Texture( 'img/wall.jpg' );
 				  texture2.Load();
+				  
+			const skybox = new Texture( 'img/skybox.jpg' );
+				  skybox.Load();
 
 			const level = new Level( 20 , 20 );
 				  level.AddWall( CreateVector3F( 1 , 0 , 1 ) , CreateVector3F( 2 , 0 , 1 ) , 1 , 1 , texture2 );
@@ -108,18 +128,22 @@
 			level.Update();
 			let ang = 0;
 			//Основной цикл
+			//context.clearRect( 0 , 0 , canvas.width , canvas.height );
+			render.ReadBuffer();
 			function Frame() {
-				context.clearRect( 0 , 0 , canvas.width , canvas.height );
+				
 				wall.Rotate( ang );
 				
 				
 				controls.Update();
 				camera.Update();
+				zBufferY.fill( 0 );
+				zBufferHeight.fill( 0 );
+				zBuffer.fill( visDist );
 				
-				render.ReadBuffer();
 				camera.Draw();
 				render.DrawBuffer();
-			//	camera.DrawMap();
+				//camera.DrawMap();
 				window.requestAnimationFrame( Frame );
 				ang += 0.01;
 			}
